@@ -27,13 +27,22 @@ export default function Inventario() {
            ← Volver al Menú Principal
         </Link>
 
+        {/* CABECERA CON TÍTULO Y BOTÓN DE AÑADIR */}
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold text-blue-900 uppercase tracking-tighter border-l-4 border-blue-900 pl-3">
             Inventario de Vehículos
           </h1>
-          <span className="bg-blue-900 text-white text-xs font-bold px-3 py-1 rounded-full">
-            {listaVehiculos.length} TOTAL
-          </span>
+          
+          <div className="flex items-center gap-4">
+            {/* BOTÓN VERDE DE AÑADIR */}
+            <Link href="/nuevo" className="bg-green-600 text-white px-4 py-2 rounded-lg font-bold text-xs hover:bg-green-700 transition-colors shadow-md">
+                + AÑADIR VEHÍCULO
+            </Link>
+            
+            <span className="bg-blue-900 text-white text-xs font-bold px-3 py-1 rounded-full">
+                {listaVehiculos.length} TOTAL
+            </span>
+          </div>
         </div>
 
         <div className="bg-white shadow-xl rounded-lg overflow-hidden border border-gray-200">
