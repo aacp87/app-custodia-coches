@@ -2,6 +2,8 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../supabase'
 
+export const dynamic = 'force-dynamic' 
+
 export default function Diario() {
   const [servicios, setServicios] = useState([])
 
