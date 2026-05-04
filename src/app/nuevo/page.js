@@ -1,69 +1,60 @@
 'use client'
-import { useState } from 'react'
-import { supabase } from '../../supabase'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
+// ... (tus otros imports: useState, supabase, etc.)
 
-export default function NuevoVehiculo() {
-  const [form, setForm] = useState({ matricula: '', marca_modelo: '', km: '', nombre_cliente: '' })
-  const [imagen, setImagen] = useState(null)
-  const [subiendo, setSubiendo] = useState(false)
-  const router = useRouter()
+return (
+  <div className="min-h-screen bg-gray-100 p-4 flex items-center justify-center">
+    <div className="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md border border-gray-200">
+      
+      <Link href="/" className="text-blue-600 font-bold text-xs uppercase mb-4 inline-block hover:underline">
+        ← Volver al Inicio
+      </Link>
 
-  const handleSubir = async (e) => {
-    e.preventDefault()
-    setSubiendo(true)
-    try {
-      let fotoUrl = ''
-      if (imagen) {
-        const fileExt = imagen.name.split('.').pop()
-        const fileName = `${Math.random()}.${fileExt}`
-        const { data, error: uploadError } = await supabase.storage
-          .from('fotos_vehiculos')
-          .upload(fileName, imagen)
-        if (uploadError) throw uploadError
-        const { data: { publicUrl } } = supabase.storage
-          .from('fotos_vehiculos')
-          .getPublicUrl(fileName)
-        fotoUrl = publicUrl
-      }
+      <h1 className="text-2xl font-black text-gray-800 uppercase mb-6 text-center tracking-tighter">
+        Registrar Nuevo Vehículo
+      </h1>
 
-      const { error } = await supabase
-        .from('vehiculos')
-        .insert([{ 
-          ...form, 
-          foto_url: fotoUrl, 
-          fecha_inicio: new Date().toISOString().split('T')[0] 
-        }])
+      <form className="space-y-4">
+        <div>
+          <label className="block text-[10px] font-bold text-gray-400 uppercase ml-1 mb-1">Matrícula</label>
+          <input 
+            type="text" 
+            placeholder="Ej: 1234ABC"
+            className="w-full p-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-900 focus:border-blue-900 outline-none transition-all placeholder:text-gray-300"
+          />
+        </div>
 
-      if (error) throw error
-      alert("✅ Guardado")
-      router.push('/inventario')
-    } catch (err) {
-      alert("Error: " + err.message)
-    } finally {
-      setSubiendo(false)
-    }
-  }
+        <div>
+          <label className="block text-[10px] font-bold text-gray-400 uppercase ml-1 mb-1">Marca y Modelo</label>
+          <input 
+            type="text" 
+            placeholder="Ej: Fiat 500"
+            className="w-full p-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-900 focus:border-blue-900 outline-none transition-all placeholder:text-gray-300"
+          />
+        </div>
 
-  return (
-    <div className="min-h-screen bg-white p-8">
-      <Link href="/" className="text-blue-600 font-bold text-sm">← VOLVER</Link>
-      <form onSubmit={handleSubir} className="max-w-md mx-auto mt-10 flex flex-col gap-4">
-        <h1 className="text-2xl font-bold uppercase">Nuevo Vehículo</h1>
-        <input type="text" placeholder="Matrícula" className="border p-3 rounded" required
-          onChange={e => setForm({...form, matricula: e.target.value.toUpperCase()})} />
-        <input type="text" placeholder="Marca y Modelo" className="border p-3 rounded" required
-          onChange={e => setForm({...form, marca_modelo: e.target.value})} />
-        <input type="number" placeholder="KM" className="border p-3 rounded" required
-          onChange={e => setForm({...form, km: e.target.value})} />
-        <input type="text" placeholder="Cliente" className="border p-3 rounded" required
-          onChange={e => setForm({...form, nombre_cliente: e.target.value})} />
-        <input type="file" accept="image/*" onChange={e => setImagen(e.target.files[0])} />
-        <button className="bg-blue-900 text-white p-4 rounded font-bold">
-          {subiendo ? 'GUARDANDO...' : 'REGISTRAR'}
+        <div>
+          <label className="block text-[10px] font-bold text-gray-400 uppercase ml-1 mb-1">Kilómetros</label>
+          <input 
+            type="number" 
+            placeholder="Ej: 45000"
+            className="w-full p-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-900 focus:border-blue-900 outline-none transition-all placeholder:text-gray-300"
+          />
+        </div>
+
+        <div>
+          <label className="block text-[10px] font-bold text-gray-400 uppercase ml-1 mb-1">Foto del Vehículo</label>
+          <input 
+            type="file" 
+            className="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+          />
+        </div>
+
+        <button 
+          className="w-full bg-blue-900 hover:bg-blue-800 text-white font-black py-4 rounded-xl shadow-lg mt-4 transition-all uppercase tracking-widest active:scale-95"
+        >
+          Registrar Vehículo
         </button>
       </form>
     </div>
-  )
-}
+  </div>
+)
