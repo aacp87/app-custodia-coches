@@ -88,4 +88,4 @@ export default function Inventario() {
       </div>
     </div>
   )
-} 
+}  
