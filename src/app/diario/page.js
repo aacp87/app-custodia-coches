@@ -6,23 +6,22 @@ export const dynamic = 'force-dynamic'
 
 export default function Diario() {
   const [servicios, setServicios] = useState([])
+  // Estado para la fecha seleccionada (por defecto, hoy)
+  const [fechaSeleccionada, setFechaSeleccionada] = useState(new Date().toISOString().split('T')[0])
 
   useEffect(() => {
     const leer = async () => {
-      // 1. Obtener la fecha de hoy en formato YYYY-MM-DD (igual que Supabase)
-      const hoy = new Date().toISOString().split('T')[0];
-
-      // 2. Filtramos para que SOLO salgan los que empiezan HOY
+      // Filtramos por la fecha que el usuario elija en el calendario
       const { data } = await supabase
         .from('vehiculos')
         .select('*')
-        .eq('fecha_inicio', hoy) // <-- Este es el filtro clave
+        .eq('fecha_inicio', fechaSeleccionada) 
         .order('fecha_inicio', { ascending: true })
 
       setServicios(data || [])
     }
     leer()
-  }, [])
+  }, [fechaSeleccionada]) // Se vuelve a ejecutar cuando cambias la fecha
 
   const formatearFecha = (f) => {
     if(!f) return '--/--/--'
@@ -32,13 +31,25 @@ export default function Diario() {
   return (
     <div className="min-h-screen bg-white p-4">
       <div className="max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-4 border-b-2 border-blue-800 pb-2">
+        
+        {/* CABECERA CON SELECTOR DE FECHA */}
+        <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4 border-b-2 border-blue-800 pb-4">
             <h1 className="text-xl font-bold text-blue-800 uppercase tracking-tighter">
-                Diario de Operaciones - Hoy: {new Date().toLocaleDateString('es-ES')}
+                Diario de Operaciones
             </h1>
-            <span className="bg-blue-100 text-blue-800 text-xs font-bold px-2.5 py-0.5 rounded">
-                {servicios.length} SERVICIOS
-            </span>
+            
+            <div className="flex items-center gap-2">
+                <label className="text-sm font-bold text-gray-600">VER DÍA:</label>
+                <input 
+                    type="date" 
+                    value={fechaSeleccionada}
+                    onChange={(e) => setFechaSeleccionada(e.target.value)}
+                    className="border-2 border-blue-800 rounded px-2 py-1 font-bold text-blue-800 outline-none"
+                />
+                <span className="bg-blue-100 text-blue-800 text-xs font-bold px-2.5 py-1.5 rounded ml-2">
+                    {servicios.length} SERVICIOS
+                </span>
+            </div>
         </div>
 
         <div className="overflow-x-auto shadow-2xl rounded-lg border border-gray-200">
@@ -77,7 +88,7 @@ export default function Diario() {
           </table>
           {servicios.length === 0 && (
             <div className="p-10 text-center">
-                <p className="text-gray-500 italic">No hay servicios programados para el día de hoy.</p>
+                <p className="text-gray-500 italic">No hay servicios programados para el día {formatearFecha(fechaSeleccionada)}.</p>
             </div>
           )}
         </div>
