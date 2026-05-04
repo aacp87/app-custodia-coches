@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { supabase } from '../supabase' // Ajusta la ruta según tu proyecto
+// Cambiado de '../supabase' a '../../supabase' para que Vercel encuentre el archivo
+import { supabase } from '../../supabase' 
 import Link from 'next/link'
 
 export default function ListaClientes() {
@@ -25,9 +26,9 @@ export default function ListaClientes() {
               <div className="bg-white p-4 rounded-xl shadow-sm border hover:border-blue-500 transition-all flex justify-between items-center cursor-pointer">
                 <div>
                   <p className="font-bold text-gray-800 uppercase">{c.nombre}</p>
-                  <p className="text-[10px] text-gray-400">SALDO: {c.saldo_pendiente}€</p>
+                  <p className="text-[10px] text-gray-400">SALDO: {c.saldo_pendiente || 0}€</p>
                 </div>
-                <span className="text-blue-600 font-bold">VER FICHA →</span>
+                <span className="text-blue-600 font-bold text-[10px] uppercase">Ver Ficha →</span>
               </div>
             </Link>
           ))}
