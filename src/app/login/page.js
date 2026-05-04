@@ -22,7 +22,7 @@ export default function LoginPage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '100px', fontFamily: 'sans-serif' }}>
       <div style={{ padding: '30px', border: '1px solid #ddd', borderRadius: '10px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
-        <h2 style={{ textAlign: 'center', color: '#0052cc' }}>ACCESO EMPLEADOS</h2>
+        <h2 style={{ textAlign: 'center', color: '#0052cc' }}>ACCESO EMPLEADOS-PRUEBA1</h2>
         <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '15px', width: '300px' }}>
           <input 
             type="email" 
