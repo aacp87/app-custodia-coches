@@ -16,7 +16,7 @@ export default function LoginPage() {
       alert("Error al entrar: " + error.message)
     } else {
       // 1. CAMBIO: Ahora te redirige directamente al diario al entrar
-      router.push('/diario') 
+      router.push('/') 
     }
   }
 
