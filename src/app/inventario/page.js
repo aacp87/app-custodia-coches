@@ -8,7 +8,6 @@ export default function Inventario() {
 
   useEffect(() => {
     const obtenerVehiculos = async () => {
-      // Traemos todos los vehículos sin filtrar por fecha
       const { data } = await supabase
         .from('vehiculos')
         .select('*')
@@ -22,13 +21,19 @@ export default function Inventario() {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-6xl mx-auto">
+        
+        {/* BOTÓN PARA VOLVER AL MENÚ DE TARJETAS */}
+        <Link href="/" className="text-blue-600 font-bold text-xs mb-4 inline-block hover:underline uppercase tracking-wider">
+           ← Volver al Menú Principal
+        </Link>
+
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold text-blue-900 uppercase tracking-tighter border-l-4 border-blue-900 pl-3">
             Inventario de Vehículos
           </h1>
-          <Link href="/diario" className="text-sm font-bold text-blue-600 hover:underline">
-            ← Volver al Diario
-          </Link>
+          <span className="bg-blue-900 text-white text-xs font-bold px-3 py-1 rounded-full">
+            {listaVehiculos.length} TOTAL
+          </span>
         </div>
 
         <div className="bg-white shadow-xl rounded-lg overflow-hidden border border-gray-200">
@@ -51,10 +56,12 @@ export default function Inventario() {
                     {v.marca_modelo}
                   </td>
                   <td className="px-6 py-4 text-gray-600">
-                    {v.nombre_cliente || 'Disponible'}
+                    {v.nombre_cliente || (
+                        <span className="text-green-600 font-bold text-xs">DISPONIBLE</span>
+                    )}
                   </td>
                   <td className="px-6 py-4">
-                    <button className="text-xs bg-gray-200 hover:bg-gray-300 px-3 py-1 rounded font-bold">
+                    <button className="text-xs bg-gray-200 hover:bg-gray-300 px-3 py-1 rounded font-bold transition-colors">
                       VER DETALLES
                     </button>
                   </td>
@@ -64,8 +71,8 @@ export default function Inventario() {
           </table>
           
           {listaVehiculos.length === 0 && (
-            <div className="p-10 text-center text-gray-500">
-              Cargando flota de vehículos...
+            <div className="p-10 text-center text-gray-500 italic">
+              No se han encontrado vehículos en la base de datos.
             </div>
           )}
         </div>
