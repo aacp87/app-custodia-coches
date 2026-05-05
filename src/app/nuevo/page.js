@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { supabase } from '../supabase'
+import { supabase } from '../../supabase'
 import Link from 'next/link'
 
 function FormularioVehiculo() {
