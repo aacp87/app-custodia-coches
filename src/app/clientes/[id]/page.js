@@ -109,8 +109,7 @@ export default function FichaCliente({ params }) {
              >
                 {subiendoFoto ? '⌛ Subiendo...' : '📸 Subir Foto'}
              </button>
-             <input type="file" ref={fileInputRef} onChange={subirFoto} accept="image/*" className="hidden" />
-
+<input type="file" ref={fileInputRef} onChange={subirFoto} accept="image/*" capture="environment" className="hidden" />
              <Link href={`/nuevo?cliente=${cliente.nombre}`}>
                 <button className="bg-blue-600 text-white px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg hover:bg-blue-700 transition-all">+ Añadir Vehículo</button>
              </Link>
