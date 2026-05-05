@@ -36,7 +36,7 @@ export default function FichaCliente({ params }) {
   if (!cliente) return <p className="p-10 text-center uppercase font-bold text-red-500">Cliente no encontrado</p>
 
   return (
-    <div className="p-4 md:p-8 bg-gray-50 min-h-screen">
+    <div className="p-4 md:p-8 bg-gray-50 min-h-screen text-gray-800">
       <div className="max-w-7xl mx-auto">
         
         {/* CABECERA */}
@@ -52,7 +52,6 @@ export default function FichaCliente({ params }) {
                 </button>
              </Link>
              
-             {/* BOTÓN VINCULADO A LA NUEVA PÁGINA DE FACTURACIÓN */}
              <Link href={`/factura-nueva?cliente=${cliente.nombre}&dni=${cliente.dni}`}>
                 <button className="bg-black text-white px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg hover:bg-gray-800 transition-all active:scale-95">
                   + Crear Factura
@@ -113,23 +112,27 @@ export default function FichaCliente({ params }) {
             </div>
           </div>
 
-          {/* COLUMNA 3: FACTURAS */}
+          {/* COLUMNA 3: FACTURAS (CLICABLES PARA EDITAR) */}
           <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
             <h2 className="text-[10px] font-black text-blue-900 uppercase tracking-widest mb-6 italic underline">Historial de Cargos</h2>
             <div className="space-y-3">
               {facturas.length > 0 ? facturas.map(f => (
-                <div key={f.id} className="p-4 bg-gray-50 rounded-2xl flex justify-between items-center border border-gray-100 hover:border-blue-200 transition-colors">
-                  <div>
-                    <p className="font-black text-gray-700 uppercase text-[10px] leading-tight">{f.concepto || 'Servicio General'}</p>
-                    <p className="text-[9px] text-gray-400 font-bold mt-1 tracking-wider">{f.fecha}</p>
+                <Link href={`/factura-editar/${f.id}`} key={f.id} className="block group">
+                  <div className="p-4 bg-gray-50 rounded-2xl flex justify-between items-center border border-gray-100 group-hover:border-blue-400 group-hover:bg-blue-50 transition-all cursor-pointer">
+                    <div>
+                      <p className="font-black text-gray-700 uppercase text-[10px] leading-tight group-hover:text-blue-700 tracking-tighter">
+                        {f.concepto || 'Servicio General'}
+                      </p>
+                      <p className="text-[9px] text-gray-400 font-bold mt-1 tracking-wider">{f.fecha}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-black text-gray-800 text-sm tracking-tighter">{f.monto}€</p>
+                      <p className={`text-[8px] font-black uppercase mt-1 ${f.pagado ? 'text-green-500' : 'text-red-500'}`}>
+                        {f.pagado ? '● PAGADO' : '● PENDIENTE'}
+                      </p>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-black text-gray-800 text-sm tracking-tighter">{f.monto}€</p>
-                    <p className={`text-[8px] font-black uppercase mt-1 ${f.pagado ? 'text-green-500' : 'text-red-500'}`}>
-                      {f.pagado ? 'PAGADO' : 'PENDIENTE'}
-                    </p>
-                  </div>
-                </div>
+                </Link>
               )) : (
                 <div className="text-center py-12 border-2 border-dashed border-gray-100 rounded-3xl">
                   <p className="text-gray-300 text-[10px] font-black uppercase tracking-widest italic">No hay facturas emitidas</p>
