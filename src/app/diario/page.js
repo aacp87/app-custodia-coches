@@ -1,97 +1,96 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { supabase } from '../../supabase'
+import Link from 'next/link'
 
-export const dynamic = 'force-dynamic' 
+export default function DiarioPage() {
+  const [avisos, setAvisos] = useState([])
+  const [cargando, setCargando] = useState(true)
 
-export default function Diario() {
-  const [servicios, setServicios] = useState([])
-  // Estado para la fecha seleccionada (por defecto, hoy)
-  const [fechaSeleccionada, setFechaSeleccionada] = useState(new Date().toISOString().split('T')[0])
+  const cargarDiario = async () => {
+    // Pedimos todos los registros a la tabla diario, ordenados alfabéticamente por fecha
+    const { data, error } = await supabase.from('diario').select('*').order('fecha', { ascending: true })
+    if (!error && data) {
+      setAvisos(data)
+    }
+    setCargando(false)
+  }
 
   useEffect(() => {
-    const leer = async () => {
-      // Filtramos por la fecha que el usuario elija en el calendario
-      const { data } = await supabase
-        .from('vehiculos')
-        .select('*')
-        .eq('fecha_inicio', fechaSeleccionada) 
-        .order('fecha_inicio', { ascending: true })
+    cargarDiario()
+  }, [])
 
-      setServicios(data || [])
+  // Función para borrar un aviso cuando el cliente ya ha recogido o devuelto el coche
+  const borrarAviso = async (id) => {
+    if (confirm("¿Confirmas que ya has gestionado este aviso y quieres borrarlo del diario?")) {
+      await supabase.from('diario').delete().eq('id', id)
+      cargarDiario() // Recargamos la lista
     }
-    leer()
-  }, [fechaSeleccionada]) // Se vuelve a ejecutar cuando cambias la fecha
-
-  const formatearFecha = (f) => {
-    if(!f) return '--/--/--'
-    return new Date(f).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: '2-digit' })
   }
 
   return (
-    <div className="min-h-screen bg-white p-4">
-      <div className="max-w-6xl mx-auto">
+    <div className="p-4 md:p-8 bg-gray-50 min-h-screen text-gray-800">
+      <div className="max-w-5xl mx-auto">
         
-        {/* CABECERA CON SELECTOR DE FECHA */}
-        <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4 border-b-2 border-blue-800 pb-4">
-            <h1 className="text-xl font-bold text-blue-800 uppercase tracking-tighter">
-                Diario de Operaciones
-            </h1>
-            
-            <div className="flex items-center gap-2">
-                <label className="text-sm font-bold text-gray-600">VER DÍA:</label>
-                <input 
-                    type="date" 
-                    value={fechaSeleccionada}
-                    onChange={(e) => setFechaSeleccionada(e.target.value)}
-                    className="border-2 border-blue-800 rounded px-2 py-1 font-bold text-blue-800 outline-none"
-                />
-                <span className="bg-blue-100 text-blue-800 text-xs font-bold px-2.5 py-1.5 rounded ml-2">
-                    {servicios.length} SERVICIOS
-                </span>
-            </div>
+        {/* CABECERA */}
+        <div className="mb-10">
+          <Link href="/">
+            <span className="bg-gray-200 text-gray-700 px-4 py-1.5 rounded-full font-black text-[10px] uppercase tracking-widest hover:bg-gray-300 transition-all cursor-pointer">
+              🏠 Inicio
+            </span>
+          </Link>
+          <h1 className="text-5xl font-black text-gray-800 uppercase tracking-tighter mt-6">Diario de Entregas</h1>
+          <p className="text-gray-500 font-bold mt-2">Control central de llegadas, salidas y notas de todos los clientes.</p>
         </div>
 
-        <div className="overflow-x-auto shadow-2xl rounded-lg border border-gray-200">
-          <table className="min-w-full bg-white text-sm">
-            <thead className="bg-gray-100 text-gray-600 uppercase text-xs border-b">
-              <tr>
-                <th className="px-4 py-3 text-left">Estado</th>
-                <th className="px-4 py-3 text-left">Fecha/Hora</th>
-                <th className="px-4 py-3 text-left">Lugar</th>
-                <th className="px-4 py-3 text-left">Vehículo</th>
-                <th className="px-4 py-3 text-left">Cliente</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {servicios.map((s) => (
-                <tr key={s.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-4">
-                    <span className="px-2 py-1 rounded text-xs font-bold bg-blue-100 text-blue-700">
-                      Collection
+        {/* LISTADO DEL DIARIO */}
+        {cargando ? (
+          <div className="flex justify-center p-10">
+            <p className="font-black text-orange-500 animate-pulse uppercase tracking-widest">Cargando diario...</p>
+          </div>
+        ) : avisos.length === 0 ? (
+          <div className="bg-white p-10 rounded-3xl text-center shadow-sm border border-gray-100">
+            <p className="font-black text-gray-400 text-xl uppercase tracking-widest mb-2">El diario está limpio</p>
+            <p className="text-sm text-gray-400 font-bold">No hay entregas pendientes. Ve a la ficha de cualquier cliente para programar una nueva llegada.</p>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {avisos.map(aviso => (
+              <div key={aviso.id} className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border-2 border-orange-100 flex flex-col md:flex-row justify-between md:items-start gap-6 hover:shadow-md transition-shadow">
+                
+                <div className="flex-1">
+                  {/* Nombre del cliente como enlace a su ficha */}
+                  <Link href={`/clientes/${aviso.dni_cliente}`}>
+                    <h2 className="text-2xl font-black text-blue-900 hover:text-blue-600 hover:underline uppercase cursor-pointer tracking-tighter">
+                      {aviso.cliente}
+                    </h2>
+                  </Link>
+                  <p className="text-[10px] font-black text-gray-400 mb-4 uppercase tracking-widest">DNI: {aviso.dni_cliente}</p>
+                  
+                  {/* Datos del aviso */}
+                  <div className="flex flex-col gap-3">
+                    <span className="inline-block w-fit bg-orange-100 text-orange-800 font-black text-[11px] px-4 py-1.5 rounded-xl uppercase tracking-widest">
+                      📥 LLEGADA: {aviso.fecha}
                     </span>
-                  </td>
-                  <td className="px-4 py-4 font-bold text-gray-700">
-                    {formatearFecha(s.fecha_inicio)}
-                  </td>
-                  <td className="px-4 py-4 text-gray-600 uppercase">Aeropuerto</td>
-                  <td className="px-4 py-4">
-                    <div className="font-bold text-gray-900">{s.marca_modelo}</div>
-                    <div className="text-blue-600 text-xs">{s.matricula}</div>
-                  </td>
-                  <td className="px-4 py-4 uppercase font-semibold text-gray-900">
-                    {s.nombre_cliente || 'Sin nombre'}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {servicios.length === 0 && (
-            <div className="p-10 text-center">
-                <p className="text-gray-500 italic">No hay servicios programados para el día {formatearFecha(fechaSeleccionada)}.</p>
-            </div>
-          )}
-        </div>
+                    <p className="text-sm font-bold text-gray-700 bg-gray-50 p-4 rounded-xl border border-gray-100">
+                      {aviso.notas}
+                    </p>
+                  </div>
+                </div>
+                
+                {/* Botón para marcar como completado */}
+                <button 
+                  onClick={() => borrarAviso(aviso.id)}
+                  className="bg-green-50 text-green-600 px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-sm hover:bg-green-500 hover:text-white transition-all whitespace-nowrap h-fit border border-green-200 hover:border-green-500"
+                >
+                  ✓ Completado (Borrar)
+                </button>
+
+              </div>
+            ))}
+          </div>
+        )}
+
       </div>
     </div>
   )
