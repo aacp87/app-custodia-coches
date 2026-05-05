@@ -1,5 +1,5 @@
 'use client'
-import { useState, Suspense } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { supabase } from '../../supabase'
 import Link from 'next/link'
@@ -8,24 +8,37 @@ function FormularioFactura() {
   const searchParams = useSearchParams()
   const router = useRouter()
   
-  // Datos automáticos de la URL
   const nombreCliente = searchParams.get('cliente')
   const dniCliente = searchParams.get('dni')
 
-  const [concepto, setConcepto] = useState('')
+  const [servicios, setServicios] = useState([]) // Lista que viene de la BD
+  const [seleccion, setSeleccion] = useState('') // Lo que eliges en el select
+  const [nuevoServicio, setNuevoServicio] = useState('') // Por si escribes uno nuevo
   const [monto, setMonto] = useState('')
   const [guardando, setGuardando] = useState(false)
 
+  // 1. CARGAR LOS SERVICIOS GUARDADOS
+  useEffect(() => {
+    const cargarServicios = async () => {
+      const { data } = await supabase.from('servicios_frecuentes').select('nombre').order('nombre')
+      setServicios(data || [])
+    }
+    cargarServicios()
+  }, [])
+
   const guardarFactura = async (e) => {
     e.preventDefault()
-    setGuardando(false)
+    setGuardando(true)
+
+    // Decidimos qué nombre usar para el concepto
+    const conceptoFinal = seleccion === 'OTRO' ? nuevoServicio.toUpperCase() : seleccion
 
     // 1. Insertar la factura
     const { error: errorFactura } = await supabase.from('facturas').insert([
       { 
         dni_cliente: dniCliente,
         nombre_cliente: nombreCliente,
-        concepto: concepto,
+        concepto: conceptoFinal,
         monto: parseFloat(monto),
         fecha: new Date().toLocaleDateString(),
         pagado: false
@@ -34,18 +47,21 @@ function FormularioFactura() {
 
     if (errorFactura) {
       alert("Error: " + errorFactura.message)
+      setGuardando(false)
       return
     }
 
-    // 2. ACTUALIZAR LA DEUDA DEL CLIENTE (Sumamos el nuevo monto)
-    // Primero leemos la deuda actual
+    // 2. SI ES UN SERVICIO NUEVO, GUARDARLO EN LA LISTA PARA SIEMPRE
+    if (seleccion === 'OTRO' && nuevoServicio) {
+      await supabase.from('servicios_frecuentes').upsert([{ nombre: conceptoFinal }])
+    }
+
+    // 3. ACTUALIZAR LA DEUDA DEL CLIENTE
     const { data: cliente } = await supabase.from('clientes').select('saldo_pendiente').eq('dni', dniCliente).single()
     const nuevaDeuda = (cliente.saldo_pendiente || 0) + parseFloat(monto)
-
-    // Actualizamos el saldo en la tabla clientes
     await supabase.from('clientes').update({ saldo_pendiente: nuevaDeuda }).eq('dni', dniCliente)
 
-    alert("✅ Cargo añadido a la cuenta de " + nombreCliente)
+    alert("✅ Cargo de " + conceptoFinal + " añadido")
     router.back()
   }
 
@@ -57,39 +73,46 @@ function FormularioFactura() {
         
         <form onSubmit={guardarFactura} className="space-y-4">
           <div>
-            <label className="text-[10px] font-black text-gray-400 uppercase ml-2">Concepto del servicio</label>
+            <label className="text-[10px] font-black text-gray-400 uppercase ml-2 tracking-widest">Servicio</label>
             <select 
-              value={concepto} 
-              onChange={(e) => setConcepto(e.target.value)}
-              className="w-full p-4 bg-gray-50 rounded-2xl border-none font-bold text-gray-700 outline-blue-500"
+              value={seleccion} 
+              onChange={(e) => setSeleccion(e.target.value)}
+              className="w-full p-4 bg-gray-50 rounded-2xl border-none font-bold text-gray-700 outline-blue-500 shadow-inner"
               required
             >
               <option value="">Selecciona servicio...</option>
-              <option value="Custodia Mensual">Custodia Mensual</option>
-              <option value="Gestión ITV">Gestión ITV</option>
-              <option value="Lavado Completo">Lavado Completo</option>
-              <option value="Mantenimiento Batería">Mantenimiento Batería</option>
-              <option value="Otros">Otros (especificar)</option>
+              
+              {/* LISTA DINÁMICA DE LA BASE DE DATOS */}
+              {servicios.map((s, index) => (
+                <option key={index} value={s.nombre}>{s.nombre}</option>
+              ))}
+              
+              <option value="OTRO" className="text-blue-600 font-black">+ AÑADIR NUEVO SERVICIO...</option>
             </select>
           </div>
 
-          {concepto === 'Otros' && (
-             <input 
-               type="text" 
-               placeholder="¿Qué servicio es?" 
-               className="w-full p-4 bg-gray-50 rounded-2xl border-none font-bold outline-blue-500"
-               onChange={(e) => setConcepto(e.target.value)}
-             />
+          {seleccion === 'OTRO' && (
+             <div className="animate-bounce-subtle">
+               <label className="text-[10px] font-black text-blue-500 uppercase ml-2 tracking-widest">Escribe el nuevo servicio</label>
+               <input 
+                 type="text" 
+                 placeholder="Ej: CUSTODIA ANUAL" 
+                 className="w-full p-4 bg-blue-50 rounded-2xl border-none font-bold outline-blue-500 shadow-inner uppercase"
+                 value={nuevoServicio}
+                 onChange={(e) => setNuevoServicio(e.target.value)}
+                 required
+               />
+             </div>
           )}
 
           <div>
-            <label className="text-[10px] font-black text-gray-400 uppercase ml-2">Precio (€)</label>
+            <label className="text-[10px] font-black text-gray-400 uppercase ml-2 tracking-widest">Precio (€)</label>
             <input 
               type="number" 
               placeholder="0.00" 
               value={monto}
               onChange={(e) => setMonto(e.target.value)}
-              className="w-full p-4 bg-gray-50 rounded-2xl border-none font-bold text-2xl text-blue-600 outline-blue-500 text-center"
+              className="w-full p-4 bg-gray-50 rounded-2xl border-none font-bold text-3xl text-blue-600 outline-blue-500 text-center shadow-inner"
               required
             />
           </div>
@@ -97,18 +120,18 @@ function FormularioFactura() {
           <button 
             type="submit" 
             disabled={guardando}
-            className="w-full bg-black text-white font-black py-4 rounded-2xl shadow-lg uppercase tracking-widest text-xs hover:bg-gray-800 transition-all"
+            className="w-full bg-black text-white font-black py-4 rounded-2xl shadow-lg uppercase tracking-widest text-xs hover:bg-gray-800 transition-all active:scale-95 disabled:bg-gray-400"
           >
             {guardando ? 'Guardando...' : 'Añadir a la cuenta'}
           </button>
         </form>
 
-        <button onClick={() => router.back()} className="w-full mt-4 text-[10px] font-bold text-gray-400 uppercase italic">Cancelar</button>
+        <button onClick={() => router.back()} className="w-full mt-4 text-[10px] font-bold text-gray-300 uppercase italic hover:text-red-500">← Cancelar</button>
       </div>
     </div>
   )
 }
 
 export default function NuevaFacturaPage() {
-  return <Suspense><FormularioFactura /></Suspense>
+  return <Suspense fallback={<p className="text-center p-10 font-black uppercase">Cargando...</p>}><FormularioFactura /></Suspense>
 }
