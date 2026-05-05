@@ -37,9 +37,23 @@ export default function FichaCliente({ params }) {
         {/* CABECERA */}
         <div className="flex flex-col md:flex-row justify-between items-start mb-8 gap-4">
           <div>
-            <Link href="/clientes" className="text-blue-600 font-bold text-[10px] uppercase italic hover:underline tracking-widest">← Volver al Listado</Link>
-            <h1 className="text-5xl font-black text-gray-800 uppercase tracking-tighter mt-2">{cliente.nombre}</h1>
+            {/* NUEVOS BOTONES DE NAVEGACIÓN */}
+            <div className="flex items-center gap-2 mb-3 no-print">
+               <Link href="/">
+                 <span className="bg-gray-200 text-gray-700 px-4 py-1.5 rounded-full font-black text-[10px] uppercase tracking-widest hover:bg-gray-300 transition-all cursor-pointer">
+                   🏠 Inicio
+                 </span>
+               </Link>
+               <Link href="/clientes">
+                 <span className="bg-blue-100 text-blue-700 px-4 py-1.5 rounded-full font-black text-[10px] uppercase tracking-widest hover:bg-blue-200 transition-all cursor-pointer">
+                   ← Lista de Clientes
+                 </span>
+               </Link>
+            </div>
+            
+            <h1 className="text-5xl font-black text-gray-800 uppercase tracking-tighter">{cliente.nombre}</h1>
           </div>
+          
           <div className="flex gap-3 no-print">
              <Link href={`/nuevo?cliente=${cliente.nombre}`}>
                 <button className="bg-blue-600 text-white px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg hover:bg-blue-700 transition-all">
@@ -54,7 +68,7 @@ export default function FichaCliente({ params }) {
           </div>
         </div>
 
-        {/* NUEVO DISEÑO: 2 COLUMNAS (Izquierda Info / Derecha Historial) */}
+        {/* 2 COLUMNAS (Izquierda Info / Derecha Historial) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           
           {/* COLUMNA 1: CONTACTO Y QR (4/12 de ancho) */}
@@ -86,8 +100,6 @@ export default function FichaCliente({ params }) {
                 </button>
               </div>
             </div>
-            
-            {/* EL SALDO ROJO HA SIDO ELIMINADO COMPLETAMENTE DE AQUÍ */}
           </div>
 
           {/* COLUMNA 2: EXPEDIENTE Y VISITAS (8/12 de ancho) */}
@@ -123,7 +135,6 @@ export default function FichaCliente({ params }) {
                       <div className="flex flex-col md:flex-row md:items-center justify-between p-5 bg-gray-50 border border-gray-100 rounded-2xl group-hover:bg-blue-50 group-hover:border-blue-200 transition-all">
                         
                         <div className="flex items-center gap-4">
-                          {/* Pequeño indicador visual de visita */}
                           <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-black text-xs">
                             #{facturas.length - index}
                           </div>
