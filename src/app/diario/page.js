@@ -4,74 +4,91 @@ import { supabase } from '../../supabase'
 import Link from 'next/link'
 
 export default function DiarioPage() {
-  const [avisos, setAvisos] = useState([])
+  const [operaciones, setOperaciones] = useState([])
   const [cargando, setCargando] = useState(true)
 
   // ESTADOS PARA LOS FILTROS
   const [fechaDesde, setFechaDesde] = useState('')
   const [fechaHasta, setFechaHasta] = useState('')
-  const [filtroTipo, setFiltroTipo] = useState('todos') // 'todos', 'entregas', 'devoluciones'
+  const [filtroTipo, setFiltroTipo] = useState('todos')
 
   const cargarDiario = async () => {
-    const { data: diarioData } = await supabase.from('diario').select('*').order('fecha', { ascending: true })
+    const { data: diarioData } = await supabase.from('diario').select('*')
     const { data: vehiculosData } = await supabase.from('vehiculos').select('*')
 
     if (diarioData) {
-      const avisosConCoches = diarioData.map(aviso => {
+      let eventosDesdoblados = []
+
+      diarioData.forEach(aviso => {
         const cochesDelCliente = vehiculosData ? vehiculosData.filter(v => v.nombre_cliente === aviso.cliente) : []
-        return { ...aviso, coches: cochesDelCliente }
+        
+        // 1. Extraer datos de la ENTREGA (Día que llega)
+        // Soporta formatos viejos (con T) y nuevos (con ' a las ')
+        const partesEntrega = aviso.fecha.includes(' a las ') ? aviso.fecha.split(' a las ') : aviso.fecha.split('T')
+        const fechaEntrega = partesEntrega[0]
+        const horaEntrega = partesEntrega[1] ? partesEntrega[1].replace('h','') : ''
+
+        eventosDesdoblados.push({
+          ...aviso,
+          coches: cochesDelCliente,
+          op_tipo: 'ENTREGA',
+          op_fecha: fechaEntrega,
+          op_hora: horaEntrega,
+          id_unica_ui: aviso.id + '-E' // ID falso para que React no se queje
+        })
+
+        // 2. Extraer datos de la DEVOLUCIÓN (Buscamos mágicamente dentro del texto de las notas)
+        const matchDevolucion = aviso.notas.match(/SE DEVUELVE EL:\s*(\d{4}-\d{2}-\d{2})\s*a las\s*(\d{2}:\d{2})/i)
+        
+        if (matchDevolucion) {
+          eventosDesdoblados.push({
+            ...aviso,
+            coches: cochesDelCliente,
+            op_tipo: 'DEVOLUCIÓN',
+            op_fecha: matchDevolucion[1],
+            op_hora: matchDevolucion[2],
+            id_unica_ui: aviso.id + '-D'
+          })
+        }
       })
-      setAvisos(avisosConCoches)
+
+      // Ordenamos TODOS los eventos (entregas y devoluciones mezcladas) cronológicamente
+      eventosDesdoblados.sort((a, b) => {
+        const fhA = `${a.op_fecha}T${a.op_hora}`
+        const fhB = `${b.op_fecha}T${b.op_hora}`
+        return fhA.localeCompare(fhB)
+      })
+
+      setOperaciones(eventosDesdoblados)
     }
     setCargando(false)
   }
 
   useEffect(() => { cargarDiario() }, [])
 
-  const borrarAviso = async (id) => {
-    if (confirm("¿Confirmas que ya has gestionado este aviso y quieres borrarlo del diario?")) {
+  // Como una sola fila de BD ahora son 2 eventos visuales, al borrar avisamos de que se borra todo el ciclo
+  const borrarRegistroOriginal = async (id) => {
+    if (confirm("Al completar esto se borrará todo el registro (la entrega y la devolución) del diario. ¿Continuar?")) {
       await supabase.from('diario').delete().eq('id', id)
       cargarDiario()
     }
   }
 
   // --- LÓGICA INTELIGENTE DE FILTRADO ---
-  // Extraemos la fecha de entrega (ej: "2026-05-06")
-  const getFEntrega = (aviso) => aviso.fecha.split(' ')[0]
-  // Buscamos en el texto la fecha de devolución
-  const getFDevolucion = (aviso) => {
-    const match = aviso.notas.match(/SE DEVUELVE EL: (\d{4}-\d{2}-\d{2})/)
-    return match ? match[1] : null
-  }
+  const operacionesEnRango = operaciones.filter(op => {
+    let valido = true
+    if (fechaDesde && op.op_fecha < fechaDesde) valido = false
+    if (fechaHasta && op.op_fecha > fechaHasta) valido = false
+    return valido
+  })
 
-  // 1. Filtramos primero por FECHAS
-  const avisosEnRangoFechas = avisos.map(aviso => {
-    const fe = getFEntrega(aviso)
-    const fd = getFDevolucion(aviso)
-    
-    let esEntregaValida = true
-    let esDevolucionValida = true
+  // Calculamos contadores
+  const contadorEntregas = operacionesEnRango.filter(o => o.op_tipo === 'ENTREGA').length
+  const contadorDevoluciones = operacionesEnRango.filter(o => o.op_tipo === 'DEVOLUCIÓN').length
 
-    if (fechaDesde) {
-      if (fe < fechaDesde) esEntregaValida = false
-      if (!fd || fd < fechaDesde) esDevolucionValida = false
-    }
-    if (fechaHasta) {
-      if (fe > fechaHasta) esEntregaValida = false
-      if (!fd || fd > fechaHasta) esDevolucionValida = false
-    }
-    
-    return { ...aviso, esEntregaValida, esDevolucionValida }
-  }).filter(a => a.esEntregaValida || a.esDevolucionValida)
-
-  // Calculamos los contadores para las pestañas
-  const contadorEntregas = avisosEnRangoFechas.filter(a => a.esEntregaValida).length
-  const contadorDevoluciones = avisosEnRangoFechas.filter(a => a.esDevolucionValida).length
-
-  // 2. Filtramos por PESTAÑA (Todos / Entregas / Devoluciones)
-  const avisosAVisualizar = avisosEnRangoFechas.filter(aviso => {
-    if (filtroTipo === 'entregas') return aviso.esEntregaValida
-    if (filtroTipo === 'devoluciones') return aviso.esDevolucionValida
+  const operacionesAVisualizar = operacionesEnRango.filter(o => {
+    if (filtroTipo === 'entregas') return o.op_tipo === 'ENTREGA'
+    if (filtroTipo === 'devoluciones') return o.op_tipo === 'DEVOLUCIÓN'
     return true
   })
 
@@ -103,10 +120,8 @@ export default function DiarioPage() {
           </div>
         </div>
 
-        {/* ZONA DE FILTROS (No se imprime) */}
+        {/* ZONA DE FILTROS */}
         <div className="mb-8 no-print bg-gray-50 p-6 rounded-2xl border border-gray-200">
-          
-          {/* BUSCADOR DE FECHAS */}
           <div className="flex flex-col md:flex-row gap-4 mb-6 items-center">
             <div className="flex flex-col w-full md:w-auto">
               <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Desde Fecha:</label>
@@ -132,7 +147,7 @@ export default function DiarioPage() {
               onClick={() => setFiltroTipo('todos')}
               className={`px-6 py-3 text-[11px] font-black uppercase tracking-widest transition-all ${filtroTipo === 'todos' ? 'border-b-4 border-blue-600 text-blue-700 bg-blue-50/50 rounded-t-lg' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-t-lg'}`}
             >
-              Todas ({avisosEnRangoFechas.length})
+              Todas ({operacionesEnRango.length})
             </button>
             <button 
               onClick={() => setFiltroTipo('entregas')}
@@ -154,7 +169,7 @@ export default function DiarioPage() {
           <div className="flex justify-center p-10">
             <p className="font-black text-orange-500 animate-pulse uppercase tracking-widest text-xs">Cargando datos...</p>
           </div>
-        ) : avisosAVisualizar.length === 0 ? (
+        ) : operacionesAVisualizar.length === 0 ? (
           <div className="text-center p-10 bg-gray-50 rounded-2xl border border-gray-100">
             <p className="font-black text-gray-300 text-lg uppercase tracking-widest mb-2">No hay resultados</p>
             <p className="text-xs text-gray-400 font-bold">Prueba a cambiar las fechas o las pestañas.</p>
@@ -165,55 +180,48 @@ export default function DiarioPage() {
               <thead>
                 <tr className="border-b-2 border-gray-200 text-[10px] uppercase tracking-widest text-gray-400 print:text-black print:border-black">
                   <th className="py-4 px-2 w-24 text-center">Tipo</th>
-                  <th className="py-4 px-2 w-48">Llegada / Entrega</th>
+                  <th className="py-4 px-2 w-48">Día y Hora</th>
                   <th className="py-4 px-2 w-48">Cliente</th>
                   <th className="py-4 px-2 w-56">Vehículo(s)</th>
-                  <th className="py-4 px-2">Notas / Devolución</th>
+                  <th className="py-4 px-2">Detalles / Notas</th>
                   <th className="py-4 px-2 text-right no-print w-32">Estado</th>
                 </tr>
               </thead>
               <tbody className="text-xs font-bold text-gray-700">
-                {avisosAVisualizar.map((aviso, index) => {
+                {operacionesAVisualizar.map((op, index) => {
                   
-                  // Determinamos visualmente qué tipo de operación estamos viendo si estamos en la pestaña "Todos"
-                  let tipoOperacion = "AMBAS"
-                  let colorOperacion = "bg-gray-200 text-gray-700"
-                  if (filtroTipo === 'entregas' || (filtroTipo === 'todos' && aviso.esEntregaValida && !aviso.esDevolucionValida)) {
-                    tipoOperacion = "ENTREGA"
-                    colorOperacion = "bg-orange-100 text-orange-800"
-                  } else if (filtroTipo === 'devoluciones' || (filtroTipo === 'todos' && !aviso.esEntregaValida && aviso.esDevolucionValida)) {
-                    tipoOperacion = "DEVOLUCIÓN"
-                    colorOperacion = "bg-purple-100 text-purple-800"
-                  }
+                  const esEntrega = op.op_tipo === 'ENTREGA'
+                  const colorEtiqueta = esEntrega ? "bg-orange-100 text-orange-800 border-orange-200" : "bg-purple-100 text-purple-800 border-purple-200"
 
                   return (
-                    <tr key={aviso.id} className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'} print:bg-transparent print:border-gray-400`}>
+                    <tr key={op.id_unica_ui} className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'} print:bg-transparent print:border-gray-400`}>
                       
                       {/* TIPO */}
                       <td className="py-4 px-2 align-top text-center">
-                         <span className={`${colorOperacion} px-2 py-1 rounded text-[8px] font-black uppercase tracking-widest print:border print:border-black print:bg-transparent print:text-black`}>
-                           {tipoOperacion}
+                         <span className={`${colorEtiqueta} border px-2 py-1 rounded text-[8px] font-black uppercase tracking-widest print:border print:border-black print:bg-transparent print:text-black`}>
+                           {op.op_tipo}
                          </span>
                       </td>
 
-                      {/* FECHA ENTREGA */}
+                      {/* FECHA EXACTA DE LA OPERACIÓN */}
                       <td className="py-4 px-2 align-top text-gray-800 font-black tracking-tight">
-                        {aviso.fecha}
+                        <span className={esEntrega ? 'text-orange-600' : 'text-purple-600'}>{op.op_fecha}</span> <br/>
+                        <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">a las {op.op_hora}h</span>
                       </td>
 
                       {/* CLIENTE */}
                       <td className="py-4 px-2 align-top">
-                        <Link href={`/clientes/${aviso.dni_cliente}`} className="text-blue-700 uppercase hover:underline text-sm font-black tracking-tighter block mb-1 print:text-black print:no-underline">
-                          {aviso.cliente}
+                        <Link href={`/clientes/${op.dni_cliente}`} className="text-blue-700 uppercase hover:underline text-sm font-black tracking-tighter block mb-1 print:text-black print:no-underline">
+                          {op.cliente}
                         </Link>
-                        <span className="text-[9px] text-gray-400 uppercase tracking-widest print:text-gray-600">DNI: {aviso.dni_cliente}</span>
+                        <span className="text-[9px] text-gray-400 uppercase tracking-widest print:text-gray-600">DNI: {op.dni_cliente}</span>
                       </td>
 
                       {/* VEHÍCULOS */}
                       <td className="py-4 px-2 align-top">
-                        {aviso.coches && aviso.coches.length > 0 ? (
+                        {op.coches && op.coches.length > 0 ? (
                           <div className="space-y-1">
-                            {aviso.coches.map(coche => (
+                            {op.coches.map(coche => (
                               <div key={coche.id} className="bg-white border border-gray-200 p-2 rounded flex flex-col print:border-none print:p-0">
                                 <span className="font-black uppercase text-gray-800 text-[11px] leading-tight print:text-xs">{coche.marca_modelo}</span>
                                 <span className="text-blue-600 font-black text-[10px] tracking-widest print:text-black">{coche.matricula}</span>
@@ -228,17 +236,18 @@ export default function DiarioPage() {
                       {/* NOTAS Y DEVOLUCIÓN */}
                       <td className="py-4 px-2 align-top">
                         <p className="whitespace-pre-wrap text-gray-600 font-medium text-[11px] print:text-black leading-relaxed">
-                          {aviso.notas}
+                          {op.notas}
                         </p>
                       </td>
 
-                      {/* BOTÓN COMPLETADO */}
+                      {/* BOTÓN BORRAR REGISTRO COMPLETO */}
                       <td className="py-4 px-2 align-top text-right no-print">
                         <button 
-                          onClick={() => borrarAviso(aviso.id)}
-                          className="bg-green-50 text-green-600 px-3 py-2 rounded-lg font-black text-[9px] uppercase tracking-widest border border-green-200 hover:bg-green-500 hover:text-white transition-all whitespace-nowrap"
+                          onClick={() => borrarRegistroOriginal(op.id)}
+                          className="bg-gray-50 text-gray-500 px-3 py-2 rounded-lg font-black text-[9px] uppercase tracking-widest border border-gray-200 hover:bg-red-500 hover:text-white hover:border-red-500 transition-all whitespace-nowrap"
+                          title="Borrará tanto la entrega como la devolución del sistema"
                         >
-                          ✓ Listo
+                          ✕ Borrar Registro
                         </button>
                       </td>
 
@@ -253,11 +262,7 @@ export default function DiarioPage() {
 
       <style jsx global>{`
         @media print {
-          body { 
-            background: white !important; 
-            color: black !important;
-            -webkit-print-color-adjust: exact; 
-          }
+          body { background: white !important; color: black !important; -webkit-print-color-adjust: exact; }
           .no-print { display: none !important; }
           .max-w-7xl { max-width: 100% !important; margin: 0 !important; }
         }
