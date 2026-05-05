@@ -1,141 +1,132 @@
-'use client' 
-import { useEffect, useState } from 'react'
-import { supabase } from '../../supabase' // RUTA CORREGIDA PARA VERCEL
+'use client'
+import { useState, useEffect, Suspense } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
+import { supabase } from '../supabase'
 import Link from 'next/link'
 
-export default function NuevoVehiculo() {
-  const [clientes, setClientes] = useState([])
-  const [cargando, setCargando] = useState(false)
-  const [foto, setFoto] = useState(null)
+function FormularioVehiculo() {
+  const searchParams = useSearchParams()
+  const router = useRouter()
   
-  const [formData, setFormData] = useState({
-    matricula: '',
-    marca_modelo: '',
-    cliente_id: ''
-  })
+  // Leemos el nombre del cliente si viene por la URL
+  const clientePreseleccionado = searchParams.get('cliente')
+
+  const [clientes, setClientes] = useState([])
+  const [nombreCliente, setNombreCliente] = useState(clientePreseleccionado || '')
+  const [marcaModelo, setMarcaModelo] = useState('')
+  const [matricula, setMatricula] = useState('')
+  const [fotoUrl, setFotoUrl] = useState('')
+  const [subiendo, setSubiendo] = useState(false)
 
   useEffect(() => {
-    const obtenerClientes = async () => {
-      const { data } = await supabase.from('clientes').select('id, nombre').order('nombre')
+    const cargarClientes = async () => {
+      const { data } = await supabase.from('clientes').select('nombre').order('nombre')
       setClientes(data || [])
     }
-    obtenerClientes()
+    cargarClientes()
   }, [])
 
-  const handleSubmit = async (e) => {
+  const guardarVehiculo = async (e) => {
     e.preventDefault()
-    setCargando(true)
+    setSubiendo(true)
 
-    try {
-      let fotoUrl = ''
-
-      // 1. Subir foto si existe
-      if (foto) {
-        const fileExt = foto.name.split('.').pop()
-        const fileName = `${Math.random()}.${fileExt}`
-        const { data: uploadData } = await supabase.storage
-          .from('vehiculos')
-          .upload(fileName, foto)
-        
-        if (uploadData) {
-          const { data: urlData } = supabase.storage.from('vehiculos').getPublicUrl(fileName)
-          fotoUrl = urlData.publicUrl
-        }
-      }
-
-      // 2. Buscar el nombre del cliente para guardarlo también (opcional pero ayuda)
-      const clienteSeleccionado = clientes.find(c => c.id === formData.cliente_id)
-
-      // 3. Insertar en la tabla vehiculos
-      const { error } = await supabase.from('vehiculos').insert([{
-        matricula: formData.matricula.toUpperCase(),
-        marca_modelo: formData.marca_modelo.toUpperCase(),
-        cliente_id: formData.cliente_id,
-        nombre_cliente: clienteSeleccionado?.nombre,
+    const { error } = await supabase.from('vehiculos').insert([
+      { 
+        nombre_cliente: nombreCliente, 
+        marca_modelo: marcaModelo, 
+        matricula: matricula.toUpperCase(), 
         foto_url: fotoUrl,
-        estado: 'En nave'
-      }])
+        fecha_entrada: new Date().toLocaleDateString()
+      }
+    ])
 
-      if (error) throw error
-      
-      alert('✅ Vehículo registrado con éxito')
-      window.location.href = '/inventario'
-
-    } catch (err) {
-      alert('Error al guardar: ' + err.message)
-    } finally {
-      setCargando(false)
+    if (error) {
+      alert("Error al guardar: " + error.message)
+    } else {
+      alert("✅ Vehículo registrado correctamente")
+      router.back() // Nos devuelve a la ficha del cliente automáticamente
     }
+    setSubiendo(false)
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 p-4 flex items-center justify-center">
-      <div className="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md border border-gray-200">
+    <div className="min-h-screen bg-gray-50 p-6 flex flex-col items-center">
+      <div className="max-w-md w-full bg-white p-8 rounded-3xl shadow-xl border border-gray-100">
+        <h1 className="text-2xl font-black text-blue-900 uppercase mb-6 tracking-tighter">Nuevo Vehículo</h1>
         
-        <Link href="/" className="text-blue-600 font-bold text-xs uppercase mb-4 inline-block hover:underline">
-          ← Inicio
-        </Link>
-
-        <h1 className="text-2xl font-black text-gray-800 uppercase mb-6 text-center tracking-tighter">
-          Nuevo Vehículo
-        </h1>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={guardarVehiculo} className="space-y-4">
           <div>
-            <label className="block text-[10px] font-bold text-gray-400 uppercase ml-1 mb-1">Matrícula</label>
-            <input 
-              type="text" 
-              required
-              placeholder="0000BBB"
-              className="w-full p-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-900 focus:border-blue-900 outline-none transition-all"
-              onChange={(e) => setFormData({...formData, matricula: e.target.value})}
-            />
-          </div>
-
-          <div>
-            <label className="block text-[10px] font-bold text-gray-400 uppercase ml-1 mb-1">Marca y Modelo</label>
-            <input 
-              type="text" 
-              required
-              placeholder="FIAT 500"
-              className="w-full p-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-900 focus:border-blue-900 outline-none transition-all"
-              onChange={(e) => setFormData({...formData, marca_modelo: e.target.value})}
-            />
-          </div>
-
-          <div>
-            <label className="block text-[10px] font-bold text-gray-400 uppercase ml-1 mb-1">Dueño / Cliente</label>
+            <label className="text-[10px] font-black text-gray-400 uppercase ml-2">Dueño / Cliente</label>
             <select 
+              value={nombreCliente} 
+              onChange={(e) => setNombreCliente(e.target.value)}
+              className="w-full p-4 bg-gray-50 rounded-2xl border-none font-bold text-gray-700 outline-blue-500"
               required
-              className="w-full p-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-900 focus:border-blue-900 outline-none appearance-none cursor-pointer"
-              onChange={(e) => setFormData({...formData, cliente_id: e.target.value})}
             >
-              <option value="">Selecciona un cliente...</option>
+              <option value="">Selecciona un cliente</option>
               {clientes.map(c => (
-                <option key={c.id} value={c.id}>{c.nombre}</option>
+                <option key={c.nombre} value={c.nombre}>{c.nombre}</option>
               ))}
             </select>
           </div>
 
           <div>
-            <label className="block text-[10px] font-bold text-gray-400 uppercase ml-1 mb-1">Foto del coche</label>
+            <label className="text-[10px] font-black text-gray-400 uppercase ml-2">Marca y Modelo</label>
             <input 
-              type="file" 
-              accept="image/*"
-              className="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-              onChange={(e) => setFoto(e.target.files[0])}
+              type="text" 
+              placeholder="Ej: Fiat 500 Blanco" 
+              value={marcaModelo}
+              onChange={(e) => setMarcaModelo(e.target.value)}
+              className="w-full p-4 bg-gray-50 rounded-2xl border-none font-bold outline-blue-500"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="text-[10px] font-black text-gray-400 uppercase ml-2">Matrícula</label>
+            <input 
+              type="text" 
+              placeholder="0000 AAA" 
+              value={matricula}
+              onChange={(e) => setMatricula(e.target.value)}
+              className="w-full p-4 bg-gray-50 rounded-2xl border-none font-bold outline-blue-500"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="text-[10px] font-black text-gray-400 uppercase ml-2">URL de la Foto</label>
+            <input 
+              type="text" 
+              placeholder="Pega el link de la imagen" 
+              value={fotoUrl}
+              onChange={(e) => setFotoUrl(e.target.value)}
+              className="w-full p-4 bg-gray-50 rounded-2xl border-none font-bold outline-blue-500"
             />
           </div>
 
           <button 
-            type="submit"
-            disabled={cargando}
-            className="w-full bg-blue-900 hover:bg-blue-800 text-white font-black py-4 rounded-xl shadow-lg mt-4 transition-all uppercase tracking-widest disabled:opacity-50"
+            type="submit" 
+            disabled={subiendo}
+            className="w-full bg-blue-600 text-white font-black py-4 rounded-2xl shadow-lg uppercase tracking-widest text-xs hover:bg-blue-700 transition-all disabled:bg-gray-300"
           >
-            {cargando ? 'Guardando...' : 'Registrar Vehículo'}
+            {subiendo ? 'Guardando...' : 'Registrar Vehículo'}
           </button>
         </form>
+
+        <button onClick={() => router.back()} className="w-full mt-4 text-[10px] font-bold text-gray-400 uppercase hover:text-red-500 italic">
+          Cancelar
+        </button>
       </div>
     </div>
+  )
+}
+
+// Next.js requiere Suspense para usar useSearchParams en componentes de cliente
+export default function NuevoVehiculo() {
+  return (
+    <Suspense fallback={<p className="text-center p-10 font-black uppercase">Cargando formulario...</p>}>
+      <FormularioVehiculo />
+    </Suspense>
   )
 }
