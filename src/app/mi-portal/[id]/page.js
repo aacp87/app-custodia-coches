@@ -1,18 +1,13 @@
 'use client'
 import { useEffect, useState, use } from 'react'
-import { supabase } from '../../../../supabase'
+import { supabase } from '../../../supabase' // <- RUTA CORREGIDA (3 niveles)
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
 
 export default function PortalCliente({ params }) {
   const resolvedParams = use(params)
   const dniCliente = resolvedParams.id 
-  const searchParams = useSearchParams()
   
-  // Leemos el idioma de la URL (si viene del login) o por defecto español
-  const idiomaUrl = searchParams.get('lang') || 'es'
-  const [idioma, setIdioma] = useState(idiomaUrl) 
-
+  const [idioma, setIdioma] = useState('es') // Empezamos en español por defecto
   const [cliente, setCliente] = useState(null)
   const [vehiculos, setVehiculos] = useState([])
   
@@ -69,6 +64,13 @@ export default function PortalCliente({ params }) {
   const lang = t[idioma]
 
   useEffect(() => {
+    // Leemos el idioma de la URL directamente desde el navegador (sin usar herramientas estrictas de Next.js)
+    if (typeof window !== 'undefined') {
+      const searchParams = new URLSearchParams(window.location.search)
+      const idiomaUrl = searchParams.get('lang')
+      if (idiomaUrl) setIdioma(idiomaUrl)
+    }
+
     const cargarDatos = async () => {
       const { data: clienteData } = await supabase.from('clientes').select('*').eq('dni', dniCliente).maybeSingle()
       if (clienteData) {
@@ -88,8 +90,6 @@ export default function PortalCliente({ params }) {
 
     const fechaDB = `${fechaEntrega} a las ${horaEntrega}h`
     
-    // ATENCIÓN: El texto de la base de datos SIEMPRE se guarda en español 
-    // para que el filtro del administrador en el diario siga funcionando perfectamente.
     let notasDB = `📤 SE DEVUELVE EL: ${fechaDevolucion} a las ${horaDevolucion}h.`
     if (notas) notasDB += ` | 📝 NOTA: ${notas}`
 
@@ -121,7 +121,6 @@ export default function PortalCliente({ params }) {
           </div>
           
           <div className="flex items-center gap-6">
-            {/* Toggles de Idioma */}
             <div className="flex gap-2 bg-blue-950/50 p-1 rounded-full border border-white/10">
               <button onClick={() => setIdioma('es')} className={`px-2 py-1 rounded-full text-[10px] font-black transition-all ${idioma === 'es' ? 'bg-white text-blue-900' : 'text-white hover:bg-white/20'}`}>🇪🇸 ES</button>
               <button onClick={() => setIdioma('en')} className={`px-2 py-1 rounded-full text-[10px] font-black transition-all ${idioma === 'en' ? 'bg-white text-blue-900' : 'text-white hover:bg-white/20'}`}>🇬🇧 EN</button>
@@ -138,13 +137,11 @@ export default function PortalCliente({ params }) {
 
       <div className="max-w-4xl mx-auto p-4 md:p-8 space-y-8">
         
-        {/* BIENVENIDA */}
         <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
           <h2 className="text-3xl font-black text-gray-800 uppercase tracking-tighter">{lang.hola}, {cliente.nombre}</h2>
           <p className="text-gray-500 font-bold mt-2">{lang.desc}</p>
         </div>
 
-        {/* VEHÍCULOS */}
         <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
            <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">{lang.cochesTit}</h3>
            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -157,7 +154,6 @@ export default function PortalCliente({ params }) {
            </div>
         </div>
 
-        {/* FORMULARIO DE RESERVA */}
         <div className="bg-orange-50 p-8 rounded-3xl shadow-sm border border-orange-100">
           <h3 className="text-xl font-black text-orange-800 uppercase tracking-tighter mb-2">{lang.formTit}</h3>
           <p className="text-xs font-bold text-orange-600/80 mb-6 uppercase tracking-widest">{lang.formSub}</p>
