@@ -1,8 +1,8 @@
 'use client'
-import { useEffect, useState, use, useRef } from 'react'
+import { useEffect, useState, use } from 'react'
 import { supabase } from '../../../supabase' 
 import Link from 'next/link'
-import { QRCodeSVG } from 'qrcode.react' // Librería para el QR
+import { QRCodeSVG } from 'qrcode.react' 
 
 export default function FichaCliente({ params }) {
   const resolvedParams = use(params)
@@ -12,7 +12,6 @@ export default function FichaCliente({ params }) {
   const [vehiculos, setVehiculos] = useState([])
   const [facturas, setFacturas] = useState([])
   const [cargando, setCargando] = useState(true)
-  const qrRef = useRef()
 
   const cargarDatos = async () => {
     const { data: clienteData } = await supabase.from('clientes').select('*').eq('dni', dniDeLaUrl).maybeSingle()
@@ -27,11 +26,6 @@ export default function FichaCliente({ params }) {
   }
 
   useEffect(() => { if (dniDeLaUrl) cargarDatos() }, [dniDeLaUrl])
-
-  // Función para imprimir solo el QR si lo necesitas
-  const imprimirQR = () => {
-    window.print()
-  }
 
   if (cargando) return <div className="min-h-screen bg-gray-900 flex items-center justify-center"><p className="text-white font-black animate-pulse uppercase tracking-widest">Cargando Expediente...</p></div>
   if (!cliente) return <p className="p-10 text-center uppercase font-bold text-red-500">Cliente no encontrado</p>
@@ -54,16 +48,17 @@ export default function FichaCliente({ params }) {
              </Link>
              <Link href={`/factura-nueva?cliente=${cliente.nombre}&dni=${cliente.dni}`}>
                 <button className="bg-black text-white px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg hover:bg-gray-800 transition-all">
-                  + Crear Factura
+                  + Crear Factura / Visita
                 </button>
              </Link>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* NUEVO DISEÑO: 2 COLUMNAS (Izquierda Info / Derecha Historial) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           
-          {/* COLUMNA 1: CONTACTO Y QR */}
-          <div className="space-y-6">
+          {/* COLUMNA 1: CONTACTO Y QR (4/12 de ancho) */}
+          <div className="lg:col-span-4 space-y-6">
             <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
               <h2 className="text-[10px] font-black text-blue-900 uppercase tracking-widest mb-4 italic underline">Ficha de Contacto</h2>
               <div className="space-y-2 mb-6">
@@ -91,48 +86,73 @@ export default function FichaCliente({ params }) {
                 </button>
               </div>
             </div>
-
-            <div className="bg-red-50 p-6 rounded-3xl border-2 border-red-100 text-center no-print">
-              <p className="text-[10px] font-bold text-red-400 uppercase tracking-widest">Saldo Total Pendiente</p>
-              <p className="text-6xl font-black text-red-600 my-2 tracking-tighter">{cliente.saldo_pendiente || 0}€</p>
-            </div>
+            
+            {/* EL SALDO ROJO HA SIDO ELIMINADO COMPLETAMENTE DE AQUÍ */}
           </div>
 
-          {/* COLUMNA 2: VEHÍCULOS */}
-          <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 no-print">
-            <h2 className="text-[10px] font-black text-blue-900 uppercase tracking-widest mb-6 italic underline">Flota en Custodia</h2>
-            <div className="space-y-6">
-              {vehiculos.map(v => (
-                <div key={v.id} className="border-b pb-6 last:border-0">
-                  <p className="font-black text-gray-800 uppercase text-lg leading-tight">{v.marca_modelo}</p>
-                  <span className="bg-blue-100 text-blue-700 font-black text-[10px] px-3 py-1 rounded-full uppercase">{v.matricula}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* COLUMNA 3: FACTURAS */}
-          <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 no-print">
-            <h2 className="text-[10px] font-black text-blue-900 uppercase tracking-widest mb-6 italic underline">Historial de Cargos</h2>
-            <div className="space-y-3">
-              {facturas.map(f => (
-                <Link href={`/factura-editar/${f.id}`} key={f.id} className="block group">
-                  <div className="p-4 bg-gray-50 rounded-2xl flex justify-between items-center border border-gray-100 group-hover:bg-blue-50 transition-all">
-                    <div>
-                      <p className="font-black text-gray-700 uppercase text-[10px]">{f.concepto}</p>
-                      <p className="text-[9px] text-gray-400 font-bold">{f.fecha}</p>
+          {/* COLUMNA 2: EXPEDIENTE Y VISITAS (8/12 de ancho) */}
+          <div className="lg:col-span-8 space-y-6 no-print">
+            
+            {/* SECCIÓN A: COCHES DEL CLIENTE */}
+            <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
+              <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-6">Vehículos en Custodia</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {vehiculos.length === 0 ? (
+                  <p className="text-sm font-bold text-gray-300 italic">No hay vehículos registrados.</p>
+                ) : (
+                  vehiculos.map(v => (
+                    <div key={v.id} className="p-4 bg-gray-50 border border-gray-100 rounded-2xl flex justify-between items-center">
+                      <p className="font-black text-gray-800 uppercase">{v.marca_modelo}</p>
+                      <span className="bg-blue-100 text-blue-700 font-black text-[10px] px-3 py-1 rounded-full uppercase">{v.matricula}</span>
                     </div>
-                    <p className="font-black text-gray-800 text-sm">{f.monto}€</p>
-                  </div>
-                </Link>
-              ))}
+                  ))
+                )}
+              </div>
             </div>
+
+            {/* SECCIÓN B: HISTORIAL DE VISITAS / FACTURAS */}
+            <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
+              <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-6">Historial de Visitas y Facturación</h2>
+              
+              <div className="space-y-4">
+                {facturas.length === 0 ? (
+                  <p className="text-sm font-bold text-gray-300 italic">No hay visitas registradas aún.</p>
+                ) : (
+                  facturas.map((f, index) => (
+                    <Link href={`/factura-editar/${f.id}`} key={f.id} className="block group">
+                      <div className="flex flex-col md:flex-row md:items-center justify-between p-5 bg-gray-50 border border-gray-100 rounded-2xl group-hover:bg-blue-50 group-hover:border-blue-200 transition-all">
+                        
+                        <div className="flex items-center gap-4">
+                          {/* Pequeño indicador visual de visita */}
+                          <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-black text-xs">
+                            #{facturas.length - index}
+                          </div>
+                          
+                          <div>
+                            <p className="font-black text-gray-800 uppercase text-sm">{f.concepto}</p>
+                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Fecha de visita: {f.fecha}</p>
+                          </div>
+                        </div>
+
+                        <div className="mt-4 md:mt-0 flex items-center gap-4 text-right">
+                          <span className={`px-3 py-1 rounded-full text-[9px] font-black tracking-widest uppercase ${f.pagado ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-500'}`}>
+                            {f.pagado ? 'Pagado' : 'Pendiente'}
+                          </span>
+                          <p className="font-black text-gray-800 text-lg">{f.monto}€</p>
+                        </div>
+
+                      </div>
+                    </Link>
+                  ))
+                )}
+              </div>
+            </div>
+
           </div>
 
         </div>
       </div>
 
-      {/* ESTILOS PARA IMPRESIÓN (Para que solo salga el QR al imprimir) */}
       <style jsx global>{`
         @media print {
           .no-print { display: none !important; }
@@ -142,4 +162,4 @@ export default function FichaCliente({ params }) {
       `}</style>
     </div>
   )
-} 
+}
