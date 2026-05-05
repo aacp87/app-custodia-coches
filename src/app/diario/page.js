@@ -116,7 +116,7 @@ export default function DiarioPage() {
               </Link>
             </div>
             <h1 className="text-3xl font-black text-gray-800 uppercase tracking-tighter print:text-xl">Diario de Entregas y Devoluciones</h1>
-            <p className="text-xs text-gray-400 font-bold tracking-widest uppercase mt-1 print:text-black">Autos Victoria - Listado de Operaciones</p>
+            <p className="text-xs text-gray-400 font-bold tracking-widest uppercase mt-1 print:text-black">AV MENORCA - Listado de Operaciones</p>
           </div>
 
           <div className="no-print">

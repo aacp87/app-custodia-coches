@@ -15,7 +15,7 @@ export default function EditarFactura({ params }) {
     // Diccionario de textos
     const t = {
         es: {
-            titulo: "AUTOS VICTORIA",
+            titulo: "AV MENORCA",
             subtitulo: "Gestión de Custodia de Vehículos",
             cliente: "Cliente",
             recibo: "Nº Recibo",
@@ -28,11 +28,11 @@ export default function EditarFactura({ params }) {
             confirmar: "Confirmar Cobro",
             anular: "Anular Factura",
             volver: "Volver",
-            nota: "Servicio prestado en instalaciones de Autos Victoria",
+            nota: "Servicio prestado en instalaciones de AV MENORCA",
             cargando: "Cargando recibo..."
         },
         en: {
-            titulo: "AUTOS VICTORIA",
+            titulo: "AV MENORCA",
             subtitulo: "Vehicle Storage Management",
             cliente: "Customer",
             recibo: "Receipt No.",
@@ -45,7 +45,7 @@ export default function EditarFactura({ params }) {
             confirmar: "Confirm Payment",
             anular: "Void Invoice",
             volver: "Back",
-            nota: "Service provided at Autos Victoria facilities",
+            nota: "Service provided at AV MENORCA facilities",
             cargando: "Loading receipt..."
         }
     }

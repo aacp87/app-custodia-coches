@@ -33,7 +33,7 @@ export default function PortalCliente({ params }) {
       salida: "Salida (Devolver el coche)",
       notasLoc: "¿Alguna nota o petición especial?",
       notasPlace: "Ej: Llego en el vuelo de Ryanair a las 10:15...",
-      btnEnviar: "Enviar Fechas a Autos Victoria",
+      btnEnviar: "Enviar Fechas a AV MENORCA",
       okTit: "¡Aviso enviado!",
       okDesc: "Hemos anotado tus fechas en nuestra agenda. Tendremos tu coche listo.",
       btnOtro: "Programar otro aviso",
@@ -52,7 +52,7 @@ export default function PortalCliente({ params }) {
       salida: "Departure (Return the car)",
       notasLoc: "Any special requests or notes?",
       notasPlace: "Ex: Arriving on Ryanair flight at 10:15...",
-      btnEnviar: "Send Dates to Autos Victoria",
+      btnEnviar: "Send Dates to AV MENORCA",
       okTit: "Notice sent!",
       okDesc: "We have noted your dates in our agenda. Your car will be ready.",
       btnOtro: "Schedule another notice",
@@ -116,7 +116,7 @@ export default function PortalCliente({ params }) {
       <div className="bg-blue-900 text-white p-6 relative">
         <div className="max-w-4xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="text-center md:text-left">
-            <h1 className="text-2xl font-black uppercase tracking-tighter">Autos Victoria</h1>
+            <h1 className="text-2xl font-black uppercase tracking-tighter">AV MENORCA</h1>
             <p className="text-[10px] font-bold text-blue-300 uppercase tracking-widest">{lang.portTit}</p>
           </div>
           

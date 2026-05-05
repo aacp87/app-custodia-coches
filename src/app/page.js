@@ -15,7 +15,7 @@ export default function Inicio() {
   // --- DICCIONARIO DE TRADUCCIONES ---
   const t = {
     es: {
-      titulo: "Autos Victoria",
+      titulo: "AV MENORCA",
       subtitulo: "Custodia de Vehículos en Menorca",
       btnCliente: "Soy Cliente",
       descCliente: "Gestiona las fechas de tu vehículo.",
@@ -32,7 +32,7 @@ export default function Inicio() {
       btnEntrarEmp: "Acceder al Sistema",
       errPin: "PIN incorrecto. Inténtalo de nuevo.",
       adminTit: "Panel de Control",
-      adminSub: "Autos Victoria - Modo Empleado",
+      adminSub: "AV MENORCA - Modo Empleado",
       cerrarSesion: "Cerrar Sesión ✕",
       card1Tit: "Directorio Clientes",
       card1Desc: "Buscar, ver fichas y gestionar.",
@@ -42,7 +42,7 @@ export default function Inicio() {
       card3Desc: "Registrar cliente y vehículo."
     },
     en: {
-      titulo: "Autos Victoria",
+      titulo: "AV MENORCA",
       subtitulo: "Vehicle Custody in Menorca",
       btnCliente: "I am a Client",
       descCliente: "Manage your vehicle's dates.",
@@ -59,7 +59,7 @@ export default function Inicio() {
       btnEntrarEmp: "Access System",
       errPin: "Incorrect PIN. Try again.",
       adminTit: "Control Panel",
-      adminSub: "Autos Victoria - Employee Mode",
+      adminSub: "AV MENORCA - Employee Mode",
       cerrarSesion: "Log Out ✕",
       card1Tit: "Client Directory",
       card1Desc: "Search, view profiles and manage.",
