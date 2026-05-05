@@ -8,10 +8,19 @@ export default function DiarioPage() {
   const [cargando, setCargando] = useState(true)
 
   const cargarDiario = async () => {
-    // Pedimos todos los registros a la tabla diario, ordenados alfabéticamente por fecha
-    const { data, error } = await supabase.from('diario').select('*').order('fecha', { ascending: true })
-    if (!error && data) {
-      setAvisos(data)
+    // 1. Cargamos el diario
+    const { data: diarioData } = await supabase.from('diario').select('*').order('fecha', { ascending: true })
+    
+    // 2. Cargamos todos los vehículos para cruzar los datos
+    const { data: vehiculosData } = await supabase.from('vehiculos').select('*')
+
+    if (diarioData) {
+      // Cruzamos los datos: A cada aviso le adjuntamos los coches de ese cliente
+      const avisosConCoches = diarioData.map(aviso => {
+        const cochesDelCliente = vehiculosData ? vehiculosData.filter(v => v.nombre_cliente === aviso.cliente) : []
+        return { ...aviso, coches: cochesDelCliente }
+      })
+      setAvisos(avisosConCoches)
     }
     setCargando(false)
   }
@@ -20,78 +29,133 @@ export default function DiarioPage() {
     cargarDiario()
   }, [])
 
-  // Función para borrar un aviso cuando el cliente ya ha recogido o devuelto el coche
   const borrarAviso = async (id) => {
     if (confirm("¿Confirmas que ya has gestionado este aviso y quieres borrarlo del diario?")) {
       await supabase.from('diario').delete().eq('id', id)
-      cargarDiario() // Recargamos la lista
+      cargarDiario()
     }
   }
 
   return (
-    <div className="p-4 md:p-8 bg-gray-50 min-h-screen text-gray-800">
-      <div className="max-w-5xl mx-auto">
+    <div className="p-4 md:p-8 bg-gray-50 min-h-screen text-gray-800 font-sans">
+      <div className="max-w-7xl mx-auto bg-white p-6 md:p-10 rounded-3xl shadow-sm border border-gray-100 print:p-0 print:border-none print:shadow-none print:bg-transparent">
         
-        {/* CABECERA */}
-        <div className="mb-10">
-          <Link href="/">
-            <span className="bg-gray-200 text-gray-700 px-4 py-1.5 rounded-full font-black text-[10px] uppercase tracking-widest hover:bg-gray-300 transition-all cursor-pointer">
-              🏠 Inicio
-            </span>
-          </Link>
-          <h1 className="text-5xl font-black text-gray-800 uppercase tracking-tighter mt-6">Diario de Entregas</h1>
-          <p className="text-gray-500 font-bold mt-2">Control central de llegadas, salidas y notas de todos los clientes.</p>
+        {/* CABECERA (Se ocultan los botones al imprimir) */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 border-b pb-6 print:border-b-2 print:border-black print:pb-2">
+          <div>
+            <div className="flex items-center gap-2 mb-4 no-print">
+              <Link href="/">
+                <span className="bg-gray-200 text-gray-700 px-4 py-1.5 rounded-full font-black text-[10px] uppercase tracking-widest hover:bg-gray-300 transition-all cursor-pointer">
+                  🏠 Inicio
+                </span>
+              </Link>
+            </div>
+            <h1 className="text-3xl font-black text-gray-800 uppercase tracking-tighter print:text-xl">Diario de Entregas y Devoluciones</h1>
+            <p className="text-xs text-gray-400 font-bold tracking-widest uppercase mt-1 print:text-black">Autos Victoria - Listado de Operaciones</p>
+          </div>
+
+          <div className="no-print">
+            <button 
+              onClick={() => window.print()}
+              className="bg-black text-white px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg hover:bg-gray-800 transition-all flex items-center gap-2"
+            >
+              🖨️ Imprimir Listado
+            </button>
+          </div>
         </div>
 
-        {/* LISTADO DEL DIARIO */}
+        {/* LISTADO TIPO TABLA */}
         {cargando ? (
           <div className="flex justify-center p-10">
-            <p className="font-black text-orange-500 animate-pulse uppercase tracking-widest">Cargando diario...</p>
+            <p className="font-black text-orange-500 animate-pulse uppercase tracking-widest text-xs">Cargando datos...</p>
           </div>
         ) : avisos.length === 0 ? (
-          <div className="bg-white p-10 rounded-3xl text-center shadow-sm border border-gray-100">
-            <p className="font-black text-gray-400 text-xl uppercase tracking-widest mb-2">El diario está limpio</p>
-            <p className="text-sm text-gray-400 font-bold">No hay entregas pendientes. Ve a la ficha de cualquier cliente para programar una nueva llegada.</p>
+          <div className="text-center p-10">
+            <p className="font-black text-gray-300 text-lg uppercase tracking-widest mb-2">El diario está limpio</p>
           </div>
         ) : (
-          <div className="space-y-6">
-            {avisos.map(aviso => (
-              <div key={aviso.id} className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border-2 border-orange-100 flex flex-col md:flex-row justify-between md:items-start gap-6 hover:shadow-md transition-shadow">
-                
-                <div className="flex-1">
-                  {/* Nombre del cliente como enlace a su ficha */}
-                  <Link href={`/clientes/${aviso.dni_cliente}`}>
-                    <h2 className="text-2xl font-black text-blue-900 hover:text-blue-600 hover:underline uppercase cursor-pointer tracking-tighter">
-                      {aviso.cliente}
-                    </h2>
-                  </Link>
-                  <p className="text-[10px] font-black text-gray-400 mb-4 uppercase tracking-widest">DNI: {aviso.dni_cliente}</p>
-                  
-                  {/* Datos del aviso */}
-                  <div className="flex flex-col gap-3">
-                    <span className="inline-block w-fit bg-orange-100 text-orange-800 font-black text-[11px] px-4 py-1.5 rounded-xl uppercase tracking-widest">
-                      📥 LLEGADA: {aviso.fecha}
-                    </span>
-                    <p className="text-sm font-bold text-gray-700 bg-gray-50 p-4 rounded-xl border border-gray-100">
-                      {aviso.notas}
-                    </p>
-                  </div>
-                </div>
-                
-                {/* Botón para marcar como completado */}
-                <button 
-                  onClick={() => borrarAviso(aviso.id)}
-                  className="bg-green-50 text-green-600 px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-sm hover:bg-green-500 hover:text-white transition-all whitespace-nowrap h-fit border border-green-200 hover:border-green-500"
-                >
-                  ✓ Completado (Borrar)
-                </button>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[800px]">
+              <thead>
+                <tr className="border-b-2 border-gray-200 text-[10px] uppercase tracking-widest text-gray-400 print:text-black print:border-black">
+                  <th className="py-4 px-2 w-48">Llegada / Entrega</th>
+                  <th className="py-4 px-2 w-48">Cliente</th>
+                  <th className="py-4 px-2 w-64">Vehículo(s)</th>
+                  <th className="py-4 px-2">Notas / Devolución</th>
+                  <th className="py-4 px-2 text-right no-print w-32">Estado</th>
+                </tr>
+              </thead>
+              <tbody className="text-xs font-bold text-gray-700">
+                {avisos.map((aviso, index) => (
+                  <tr key={aviso.id} className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'} print:bg-transparent print:border-gray-400`}>
+                    
+                    {/* FECHA ENTREGA */}
+                    <td className="py-4 px-2 align-top text-orange-600 font-black tracking-tight">
+                      {aviso.fecha}
+                    </td>
 
-              </div>
-            ))}
+                    {/* CLIENTE */}
+                    <td className="py-4 px-2 align-top">
+                      <Link href={`/clientes/${aviso.dni_cliente}`} className="text-blue-700 uppercase hover:underline text-sm font-black tracking-tighter block mb-1 print:text-black print:no-underline">
+                        {aviso.cliente}
+                      </Link>
+                      <span className="text-[9px] text-gray-400 uppercase tracking-widest print:text-gray-600">DNI: {aviso.dni_cliente}</span>
+                    </td>
+
+                    {/* VEHÍCULOS (Cruzados de la base de datos) */}
+                    <td className="py-4 px-2 align-top">
+                      {aviso.coches && aviso.coches.length > 0 ? (
+                        <div className="space-y-1">
+                          {aviso.coches.map(coche => (
+                            <div key={coche.id} className="bg-white border border-gray-200 p-2 rounded flex flex-col print:border-none print:p-0">
+                              <span className="font-black uppercase text-gray-800 text-[11px] leading-tight print:text-xs">{coche.marca_modelo}</span>
+                              <span className="text-blue-600 font-black text-[10px] tracking-widest print:text-black">{coche.matricula}</span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-gray-300 italic text-[10px]">Sin vehículos</span>
+                      )}
+                    </td>
+
+                    {/* NOTAS Y DEVOLUCIÓN */}
+                    <td className="py-4 px-2 align-top">
+                      <p className="whitespace-pre-wrap text-gray-600 font-medium text-[11px] print:text-black leading-relaxed">
+                        {aviso.notas}
+                      </p>
+                    </td>
+
+                    {/* BOTÓN COMPLETADO (Oculto al imprimir) */}
+                    <td className="py-4 px-2 align-top text-right no-print">
+                      <button 
+                        onClick={() => borrarAviso(aviso.id)}
+                        className="bg-green-50 text-green-600 px-3 py-2 rounded-lg font-black text-[9px] uppercase tracking-widest border border-green-200 hover:bg-green-500 hover:text-white transition-all whitespace-nowrap"
+                      >
+                        ✓ Listo
+                      </button>
+                    </td>
+
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
-
       </div>
+
+      {/* ESTILOS PARA LA IMPRESIÓN */}
+      <style jsx global>{`
+        @media print {
+          body { 
+            background: white !important; 
+            color: black !important;
+            -webkit-print-color-adjust: exact; 
+          }
+          .no-print { display: none !important; }
+          /* Quitamos los márgenes de la web para aprovechar el folio */
+          .max-w-7xl { max-width: 100% !important; margin: 0 !important; }
+        }
+      `}</style>
     </div>
   )
 }
