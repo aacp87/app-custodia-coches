@@ -11,13 +11,12 @@ function FormularioFactura() {
   const nombreCliente = searchParams.get('cliente')
   const dniCliente = searchParams.get('dni')
 
-  const [servicios, setServicios] = useState([]) // Lista que viene de la BD
-  const [seleccion, setSeleccion] = useState('') // Lo que eliges en el select
-  const [nuevoServicio, setNuevoServicio] = useState('') // Por si escribes uno nuevo
+  const [servicios, setServicios] = useState([])
+  const [seleccion, setSeleccion] = useState('')
+  const [nuevoServicio, setNuevoServicio] = useState('')
   const [monto, setMonto] = useState('')
   const [guardando, setGuardando] = useState(false)
 
-  // 1. CARGAR LOS SERVICIOS GUARDADOS
   useEffect(() => {
     const cargarServicios = async () => {
       const { data } = await supabase.from('servicios_frecuentes').select('nombre').order('nombre')
@@ -30,10 +29,8 @@ function FormularioFactura() {
     e.preventDefault()
     setGuardando(true)
 
-    // Decidimos qué nombre usar para el concepto
     const conceptoFinal = seleccion === 'OTRO' ? nuevoServicio.toUpperCase() : seleccion
 
-    // 1. Insertar la factura
     const { error: errorFactura } = await supabase.from('facturas').insert([
       { 
         dni_cliente: dniCliente,
@@ -51,12 +48,10 @@ function FormularioFactura() {
       return
     }
 
-    // 2. SI ES UN SERVICIO NUEVO, GUARDARLO EN LA LISTA PARA SIEMPRE
     if (seleccion === 'OTRO' && nuevoServicio) {
       await supabase.from('servicios_frecuentes').upsert([{ nombre: conceptoFinal }])
     }
 
-    // 3. ACTUALIZAR LA DEUDA DEL CLIENTE
     const { data: cliente } = await supabase.from('clientes').select('saldo_pendiente').eq('dni', dniCliente).single()
     const nuevaDeuda = (cliente.saldo_pendiente || 0) + parseFloat(monto)
     await supabase.from('clientes').update({ saldo_pendiente: nuevaDeuda }).eq('dni', dniCliente)
@@ -68,39 +63,38 @@ function FormularioFactura() {
   return (
     <div className="min-h-screen bg-gray-50 p-6 flex items-center justify-center">
       <div className="max-w-md w-full bg-white p-8 rounded-3xl shadow-xl border border-gray-100">
-        <h1 className="text-2xl font-black text-blue-900 uppercase mb-2 tracking-tighter">Nueva Factura</h1>
-        <p className="text-[10px] font-bold text-gray-400 uppercase mb-6 italic">Cliente: {nombreCliente}</p>
+        <h1 className="text-2xl font-black text-blue-900 uppercase mb-2 tracking-tighter text-center">Nueva Factura</h1>
+        <p className="text-[10px] font-bold text-gray-400 uppercase mb-6 text-center italic tracking-widest">Para: {nombreCliente}</p>
         
-        <form onSubmit={guardarFactura} className="space-y-4">
+        <form onSubmit={guardarFactura} className="space-y-5">
           <div>
             <label className="text-[10px] font-black text-gray-400 uppercase ml-2 tracking-widest">Servicio</label>
             <select 
               value={seleccion} 
               onChange={(e) => setSeleccion(e.target.value)}
-              className="w-full p-4 bg-gray-50 rounded-2xl border-none font-bold text-gray-700 outline-blue-500 shadow-inner"
+              className="w-full p-4 bg-gray-50 rounded-2xl border-none font-bold text-gray-800 outline-blue-500 shadow-inner mt-1"
               required
             >
               <option value="">Selecciona servicio...</option>
-              
-              {/* LISTA DINÁMICA DE LA BASE DE DATOS */}
               {servicios.map((s, index) => (
                 <option key={index} value={s.nombre}>{s.nombre}</option>
               ))}
-              
               <option value="OTRO" className="text-blue-600 font-black">+ AÑADIR NUEVO SERVICIO...</option>
             </select>
           </div>
 
           {seleccion === 'OTRO' && (
-             <div className="animate-bounce-subtle">
-               <label className="text-[10px] font-black text-blue-500 uppercase ml-2 tracking-widest">Escribe el nuevo servicio</label>
+             <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+               <label className="text-[10px] font-black text-blue-600 uppercase ml-2 tracking-widest">Escribe el nuevo servicio</label>
                <input 
                  type="text" 
-                 placeholder="Ej: CUSTODIA ANUAL" 
-                 className="w-full p-4 bg-blue-50 rounded-2xl border-none font-bold outline-blue-500 shadow-inner uppercase"
+                 placeholder="EJ: CUSTODIA ANUAL" 
+                 /* CAMBIO CRÍTICO: Fondo blanco, texto negro y borde marcado */
+                 className="w-full p-4 bg-white border-2 border-blue-500 rounded-2xl font-black text-gray-900 outline-none shadow-md mt-1 uppercase placeholder:text-gray-300"
                  value={nuevoServicio}
                  onChange={(e) => setNuevoServicio(e.target.value)}
                  required
+                 autoFocus
                />
              </div>
           )}
@@ -112,7 +106,7 @@ function FormularioFactura() {
               placeholder="0.00" 
               value={monto}
               onChange={(e) => setMonto(e.target.value)}
-              className="w-full p-4 bg-gray-50 rounded-2xl border-none font-bold text-3xl text-blue-600 outline-blue-500 text-center shadow-inner"
+              className="w-full p-4 bg-gray-50 rounded-2xl border-none font-bold text-4xl text-blue-600 outline-blue-500 text-center shadow-inner mt-1"
               required
             />
           </div>
@@ -120,13 +114,13 @@ function FormularioFactura() {
           <button 
             type="submit" 
             disabled={guardando}
-            className="w-full bg-black text-white font-black py-4 rounded-2xl shadow-lg uppercase tracking-widest text-xs hover:bg-gray-800 transition-all active:scale-95 disabled:bg-gray-400"
+            className="w-full bg-black text-white font-black py-5 rounded-2xl shadow-lg uppercase tracking-widest text-xs hover:bg-gray-800 transition-all active:scale-95 disabled:bg-gray-400 mt-4"
           >
             {guardando ? 'Guardando...' : 'Añadir a la cuenta'}
           </button>
         </form>
 
-        <button onClick={() => router.back()} className="w-full mt-4 text-[10px] font-bold text-gray-300 uppercase italic hover:text-red-500">← Cancelar</button>
+        <button onClick={() => router.back()} className="w-full mt-6 text-[10px] font-bold text-gray-300 uppercase italic hover:text-red-500 transition-colors text-center">← Cancelar</button>
       </div>
     </div>
   )
