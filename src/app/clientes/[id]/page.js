@@ -15,6 +15,9 @@ export default function FichaCliente({ params }) {
   const [fotos, setFotos] = useState([])
   const [cargando, setCargando] = useState(true)
   const [subiendoFoto, setSubiendoFoto] = useState(false)
+  
+  // NUEVO: Estado para controlar qué pestaña está activa
+  const [pestanaActiva, setPestanaActiva] = useState('fotos') 
 
   const [editando, setEditando] = useState(false)
   const [nuevoTelefono, setNuevoTelefono] = useState('')
@@ -33,7 +36,6 @@ export default function FichaCliente({ params }) {
       const { data: factu } = await supabase.from('facturas').select('*').eq('dni_cliente', clienteData.dni).order('fecha', { ascending: false })
       setFacturas(factu || [])
 
-      // CARGAMOS FOTOS (Asegúrate que la columna se llama dni_cliente)
       const { data: fotosData } = await supabase.from('fotos_coches').select('*').eq('dni_cliente', clienteData.dni).order('id', { ascending: false })
       setFotos(fotosData || [])
     }
@@ -45,48 +47,20 @@ export default function FichaCliente({ params }) {
   const subirFoto = async (e) => {
     const archivo = e.target.files[0]
     if (!archivo) return
-
     setSubiendoFoto(true)
-    
-    // Generamos un nombre único para evitar conflictos de caché
     const extension = archivo.name.split('.').pop()
     const nombreArchivo = `${dniDeLaUrl}-${Date.now()}.${extension}`
-
     try {
-      // 1. Subida al Storage
-      const { error: errorSubida } = await supabase.storage
-        .from('fotos_coches')
-        .upload(nombreArchivo, archivo)
-      
-      if (errorSubida) throw new Error("Error en Storage: " + errorSubida.message)
-
-      // 2. Obtener URL Pública
-      const { data: urlPublica } = supabase.storage
-        .from('fotos_coches')
-        .getPublicUrl(nombreArchivo)
-
-      if (!urlPublica?.publicUrl) throw new Error("No se pudo generar la URL pública")
-
-      // 3. Insertar en la Tabla fotos_coches
-      const { error: errorTabla } = await supabase.from('fotos_coches').insert([
-        { 
-          dni_cliente: dniDeLaUrl, 
-          url: urlPublica.publicUrl 
-        }
-      ])
-
-      if (errorTabla) throw new Error("Error en Tabla: " + errorTabla.message)
-
-      // 4. Éxito: Recargamos datos
+      const { error: errorSubida } = await supabase.storage.from('fotos_coches').upload(nombreArchivo, archivo)
+      if (errorSubida) throw new Error(errorSubida.message)
+      const { data: urlPublica } = supabase.storage.from('fotos_coches').getPublicUrl(nombreArchivo)
+      await supabase.from('fotos_coches').insert([{ dni_cliente: dniDeLaUrl, url: urlPublica.publicUrl }])
       await cargarDatos()
-      alert("✅ Foto guardada correctamente")
-
+      setPestanaActiva('fotos') // Ir a fotos al terminar
     } catch (err) {
-      console.error(err)
-      alert("❌ Error: " + err.message)
+      alert("Error: " + err.message)
     } finally {
       setSubiendoFoto(false)
-      if (fileInputRef.current) fileInputRef.current.value = "" // Limpiamos el input
     }
   }
 
@@ -99,140 +73,149 @@ export default function FichaCliente({ params }) {
     }
   }
 
-  const guardarContacto = async () => {
-    const { error } = await supabase.from('clientes').update({ telefono: nuevoTelefono, email: nuevoEmail }).eq('dni', dniDeLaUrl)
-    if (!error) {
-      setCliente({ ...cliente, telefono: nuevoTelefono, email: nuevoEmail })
-      setEditando(false) 
-    }
-  }
-
   if (cargando) return <div className="min-h-screen bg-gray-900 flex items-center justify-center"><p className="text-white font-black animate-pulse uppercase tracking-widest">Cargando...</p></div>
   if (!cliente) return <p className="p-10 text-center uppercase font-bold text-red-500">Cliente no encontrado</p>
 
   return (
-    <div className="p-4 md:p-8 bg-gray-50 min-h-screen text-gray-800">
+    <div className="p-4 md:p-8 bg-gray-50 min-h-screen text-gray-800 font-sans">
       <div className="max-w-7xl mx-auto">
         
-        <div className="flex flex-col md:flex-row justify-between items-start mb-8 gap-4">
+        {/* CABECERA */}
+        <div className="flex flex-col md:flex-row justify-between items-start mb-10 gap-6">
           <div>
-            <div className="flex items-center gap-2 mb-3 no-print">
-               <Link href="/"><span className="bg-gray-200 text-gray-700 px-4 py-1.5 rounded-full font-black text-[10px] uppercase tracking-widest hover:bg-gray-300 transition-all cursor-pointer">🏠 Inicio</span></Link>
-               <Link href="/clientes"><span className="bg-blue-100 text-blue-700 px-4 py-1.5 rounded-full font-black text-[10px] uppercase tracking-widest hover:bg-blue-200 transition-all cursor-pointer">← Lista</span></Link>
+            <div className="flex items-center gap-2 mb-4">
+               <Link href="/"><span className="bg-white border border-gray-200 text-gray-400 px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest hover:text-black transition-all cursor-pointer shadow-sm">🏠 Inicio</span></Link>
+               <Link href="/clientes"><span className="bg-white border border-gray-200 text-gray-400 px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest hover:text-black transition-all cursor-pointer shadow-sm">← Lista</span></Link>
             </div>
-            <h1 className="text-5xl font-black text-gray-800 uppercase tracking-tighter">{cliente.nombre}</h1>
+            <h1 className="text-6xl font-black text-gray-900 uppercase tracking-tighter leading-none">{cliente.nombre}</h1>
           </div>
           
-          <div className="flex flex-wrap gap-3 no-print">
-             <button 
-                onClick={() => fileInputRef.current.click()}
-                disabled={subiendoFoto}
-                className={`${subiendoFoto ? 'bg-gray-400' : 'bg-orange-500 hover:bg-orange-600'} text-white px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg transition-all flex items-center gap-2`}
-             >
-                {subiendoFoto ? '⌛ Subiendo...' : '📸 Subir Foto'}
+          <div className="flex flex-wrap gap-3">
+             <button onClick={() => fileInputRef.current.click()} disabled={subiendoFoto} className="bg-orange-500 text-white px-8 py-4 rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-xl shadow-orange-200 hover:bg-orange-600 active:scale-95 transition-all">
+                {subiendoFoto ? 'Subiendo...' : '📸 Subir Foto'}
              </button>
              <input type="file" ref={fileInputRef} onChange={subirFoto} accept="image/*" capture="environment" className="hidden" />
 
-             <Link href={`/nuevo?cliente=${cliente.nombre}`}>
-                <button className="bg-blue-600 text-white px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg hover:bg-blue-700 transition-all">+ Añadir Vehículo</button>
-             </Link>
              <Link href={`/factura-nueva?cliente=${cliente.nombre}&dni=${cliente.dni}`}>
-                <button className="bg-black text-white px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg hover:bg-gray-800 transition-all">+ Crear Factura</button>
+                <button className="bg-black text-white px-8 py-4 rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-xl shadow-gray-300 hover:bg-gray-800 active:scale-95 transition-all">+ Factura</button>
              </Link>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
           
-          <div className="lg:col-span-4 space-y-6">
-            <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-[10px] font-black text-blue-900 uppercase tracking-widest italic underline">Ficha de Contacto</h2>
-                {!editando ? (
-                  <button onClick={() => setEditando(true)} className="text-[9px] font-black uppercase text-blue-500 hover:text-blue-700 no-print tracking-widest bg-blue-50 px-2 py-1 rounded">✏️ Editar</button>
-                ) : (
-                  <button onClick={guardarContacto} className="text-[9px] font-black uppercase text-green-600 hover:text-green-800 no-print tracking-widest bg-green-50 px-2 py-1 rounded">💾 Guardar</button>
-                )}
+          {/* FICHA FIJA (IZQUIERDA) */}
+          <div className="lg:col-span-4">
+            <div className="bg-white p-8 rounded-[2rem] shadow-xl shadow-gray-100 border border-gray-100 sticky top-8">
+              <h2 className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-6 border-b pb-4 italic">Ficha de Contacto</h2>
+              <div className="space-y-4 mb-8">
+                <div>
+                    <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest mb-1">DNI del Titular</p>
+                    <p className="text-xl font-black text-gray-800">{cliente.dni}</p>
+                </div>
+                <div>
+                    <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest mb-1">Teléfono</p>
+                    <p className="text-xl font-black text-gray-800">{cliente.telefono || '---'}</p>
+                </div>
               </div>
 
-              {editando ? (
-                <div className="space-y-3 mb-6 bg-gray-50 p-3 rounded-xl border border-gray-200">
-                  <input type="text" value={nuevoTelefono} onChange={(e) => setNuevoTelefono(e.target.value)} className="w-full p-2 border rounded text-xs font-bold" placeholder="Teléfono" />
-                  <input type="email" value={nuevoEmail} onChange={(e) => setNuevoEmail(e.target.value)} className="w-full p-2 border rounded text-xs font-bold" placeholder="Email" />
-                </div>
-              ) : (
-                <div className="space-y-2 mb-6">
-                  <p className="text-xs font-bold text-gray-400 uppercase tracking-tighter">DNI: <span className="text-gray-800 font-black">{cliente.dni}</span></p>
-                  <p className="text-xs font-bold text-gray-400 uppercase tracking-tighter">Tel: <span className="text-gray-800 font-black">{cliente.telefono || '---'}</span></p>
-                  <p className="text-xs font-bold text-gray-400 uppercase tracking-tighter">Email: <span className="text-blue-600 font-black break-all">{cliente.email || '---'}</span></p>
-                </div>
-              )}
-
-              <div className="border-t pt-6 flex flex-col items-center">
-                <QRCodeSVG value={`https://avmenorca.com/clientes/${cliente.dni}`} size={120} level={"H"} includeMargin={true} />
-                <p className="text-[10px] font-black text-blue-600 mt-4 uppercase">Escanear para abrir ficha</p>
+              <div className="bg-gray-50 p-6 rounded-3xl border border-gray-100 flex flex-col items-center">
+                <QRCodeSVG value={`https://avmenorca.com/clientes/${cliente.dni}`} size={140} level={"H"} />
+                <p className="text-[10px] font-black text-gray-400 mt-6 uppercase tracking-[0.2em]">Escaneo Rápido</p>
               </div>
             </div>
           </div>
 
-          <div className="lg:col-span-8 space-y-6 no-print">
-            <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
-              <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-6">Estado del Vehículo (Fotos)</h2>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                {fotos.length === 0 ? (
-                  <p className="text-sm font-bold text-gray-300 italic col-span-full">Sin fotos todavía.</p>
-                ) : (
-                  fotos.map(foto => (
-                    <div key={foto.id} className="relative group rounded-xl overflow-hidden border border-gray-200 aspect-square bg-gray-100">
-                      <img src={foto.url} alt="Coche" className="w-full h-full object-cover" />
-                      <button 
-                        onClick={() => borrarFoto(foto.id, foto.url)}
-                        className="absolute top-2 right-2 bg-red-500 text-white w-7 h-7 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity font-bold shadow-lg"
-                      >✕</button>
-                    </div>
-                  ))
-                )}
+          {/* COMPARTIMENTOS / PESTAÑAS (DERECHA) */}
+          <div className="lg:col-span-8">
+            <div className="bg-white rounded-[2rem] shadow-xl shadow-gray-100 border border-gray-100 overflow-hidden">
+              
+              {/* BOTONES DE COMPARTIMENTO */}
+              <div className="flex border-b border-gray-100 p-2 gap-2 bg-gray-50/50">
+                <button onClick={() => setPestanaActiva('fotos')} className={`flex-1 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all ${pestanaActiva === 'fotos' ? 'bg-white text-blue-600 shadow-sm border border-gray-100' : 'text-gray-400 hover:text-gray-600'}`}>
+                  🖼️ Fotos ({fotos.length})
+                </button>
+                <button onClick={() => setPestanaActiva('facturas')} className={`flex-1 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all ${pestanaActiva === 'facturas' ? 'bg-white text-blue-600 shadow-sm border border-gray-100' : 'text-gray-400 hover:text-gray-600'}`}>
+                  📄 Facturas ({facturas.length})
+                </button>
+                <button onClick={() => setPestanaActiva('vehiculos')} className={`flex-1 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all ${pestanaActiva === 'vehiculos' ? 'bg-white text-blue-600 shadow-sm border border-gray-100' : 'text-gray-400 hover:text-gray-600'}`}>
+                  🚗 Vehículos ({vehiculos.length})
+                </button>
               </div>
-            </div>
 
-            <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
-              <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-6">Vehículos en Custodia</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {vehiculos.map(v => (
-                  <div key={v.id} className="p-4 bg-gray-50 border border-gray-100 rounded-2xl flex justify-between items-center group">
-                    <div>
-                      <p className="font-black text-gray-800 uppercase">{v.marca_modelo}</p>
-                      <span className="bg-blue-100 text-blue-700 font-black text-[10px] px-3 py-1 rounded-full uppercase inline-block mt-1">{v.matricula}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
-              <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-6">Historial de Visitas</h2>
-              <div className="space-y-4">
-                {facturas.map((f, index) => (
-                  <Link key={f.id} href={`/factura-editar/${f.id}`} className="block">
-                    <div className="flex items-center justify-between p-5 bg-gray-50 border border-gray-100 rounded-2xl hover:bg-blue-50 transition-all">
-                      <div className="flex items-center gap-4">
-                        <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-black text-xs">#{facturas.length - index}</div>
-                        <div>
-                          <p className="font-black text-gray-800 uppercase text-sm">{f.concepto}</p>
-                          <p className="text-[10px] text-gray-400 font-bold uppercase mt-1">{f.fecha}</p>
+              {/* CONTENIDO DINÁMICO */}
+              <div className="p-8">
+                
+                {/* COMPARTIMENTO FOTOS */}
+                {pestanaActiva === 'fotos' && (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 animate-in fade-in duration-300">
+                    {fotos.length === 0 ? (
+                      <p className="text-sm font-bold text-gray-300 italic py-10 text-center col-span-full">No hay fotos registradas para este cliente.</p>
+                    ) : (
+                      fotos.map(foto => (
+                        <div key={foto.id} className="relative group rounded-2xl overflow-hidden border-4 border-gray-50 aspect-square shadow-sm">
+                          <img src={foto.url} alt="Coche" className="w-full h-full object-cover" />
+                          <button onClick={() => borrarFoto(foto.id, foto.url)} className="absolute top-2 right-2 bg-red-500 text-white w-8 h-8 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all font-bold">✕</button>
                         </div>
-                      </div>
-                      <div className="text-right">
-                        <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase ${f.pagado ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-500'}`}>{f.pagado ? 'Pagado' : 'Pendiente'}</span>
-                        <p className="font-black text-gray-800 text-lg mt-1">{f.monto}€</p>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
+                      ))
+                    )}
+                  </div>
+                )}
+
+                {/* COMPARTIMENTO FACTURAS */}
+                {pestanaActiva === 'facturas' && (
+                  <div className="space-y-4 animate-in fade-in duration-300">
+                    {facturas.length === 0 ? (
+                      <p className="text-sm font-bold text-gray-300 italic py-10 text-center">No hay facturas o visitas registradas.</p>
+                    ) : (
+                      facturas.map((f, i) => (
+                        <Link key={f.id} href={`/factura-editar/${f.id}`}>
+                          <div className="flex items-center justify-between p-6 bg-gray-50 rounded-2xl border border-gray-100 hover:border-blue-200 hover:bg-blue-50 transition-all mb-3">
+                            <div className="flex items-center gap-4">
+                              <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-black text-[10px]">#{facturas.length - i}</div>
+                              <div>
+                                <p className="font-black text-gray-900 uppercase text-sm">{f.concepto}</p>
+                                <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">{f.fecha}</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-black text-xl text-gray-900">{f.monto}€</p>
+                              <span className={`text-[8px] font-black uppercase tracking-[0.2em] px-2 py-1 rounded-lg ${f.pagado ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>{f.pagado ? 'Pagado' : 'Pendiente'}</span>
+                            </div>
+                          </div>
+                        </Link>
+                      ))
+                    )}
+                  </div>
+                )}
+
+                {/* COMPARTIMENTO VEHÍCULOS */}
+                {pestanaActiva === 'vehiculos' && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in duration-300">
+                    {vehiculos.length === 0 ? (
+                      <p className="text-sm font-bold text-gray-300 italic py-10 text-center col-span-full">Este cliente no tiene vehículos asignados.</p>
+                    ) : (
+                      vehiculos.map(v => (
+                        <div key={v.id} className="p-6 bg-gray-900 text-white rounded-3xl flex justify-between items-center shadow-lg">
+                          <div>
+                            <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">Vehículo</p>
+                            <p className="font-black text-lg uppercase leading-tight">{v.marca_modelo}</p>
+                            <p className="text-blue-300 font-black text-xs mt-2 bg-blue-900/50 inline-block px-3 py-1 rounded-lg">{v.matricula}</p>
+                          </div>
+                          <div className="opacity-20 text-4xl">🚗</div>
+                        </div>
+                      ))
+                    )}
+                    <Link href={`/nuevo?cliente=${cliente.nombre}`} className="border-2 border-dashed border-gray-200 rounded-3xl flex items-center justify-center p-6 text-gray-400 font-black text-[10px] uppercase hover:bg-gray-50 transition-all">
+                      + Añadir Vehículo
+                    </Link>
+                  </div>
+                )}
+
               </div>
             </div>
-
           </div>
+
         </div>
       </div>
     </div>
