@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState, use } from 'react'
-import { supabase } from '../../../../supabase'
+import { supabase } from '../../../supabase'
 import Link from 'next/link'
 
 export default function PortalCliente({ params }) {
