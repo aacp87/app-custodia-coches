@@ -2,10 +2,12 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../supabase'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 
 export default function Clientes() {
   const [clientes, setClientes] = useState([])
   const [busqueda, setBusqueda] = useState('')
+  const router = useRouter() // Herramienta para poder ir "Atrás"
 
   const cargarClientes = async () => {
     const { data } = await supabase.from('clientes').select('*').order('nombre', { ascending: true })
@@ -19,17 +21,15 @@ export default function Clientes() {
     const confirmacion = window.confirm(`⚠️ ¡ATENCIÓN! Vas a borrar al cliente ${nombre}.\n\nEsto también borrará para siempre todos sus COCHES, FACTURAS y AVISOS del diario.\n\n¿Estás completamente seguro?`)
     
     if (confirmacion) {
-      // Borrado en cascada para no dejar basura en la base de datos
       await supabase.from('diario').delete().eq('dni_cliente', dni)
       await supabase.from('facturas').delete().eq('dni_cliente', dni)
       await supabase.from('vehiculos').delete().eq('nombre_cliente', nombre)
       await supabase.from('clientes').delete().eq('dni', dni)
       
-      cargarClientes() // Recarga la lista
+      cargarClientes()
     }
   }
 
-  // Lógica del buscador
   const filtrados = clientes.filter(c => 
     c.nombre.toLowerCase().includes(busqueda.toLowerCase()) || 
     c.dni.toLowerCase().includes(busqueda.toLowerCase())
@@ -38,13 +38,23 @@ export default function Clientes() {
   return (
     <div className="p-4 md:p-8 bg-gray-50 min-h-screen font-sans">
       <div className="max-w-4xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-           <h1 className="text-3xl font-black text-blue-900 uppercase tracking-tighter">Clientes</h1>
-           <Link href="/">
-             <span className="bg-gray-200 text-gray-700 px-4 py-2 rounded-full font-black text-[10px] uppercase tracking-widest hover:bg-gray-300 transition-all cursor-pointer">
-               🏠 Inicio
-             </span>
-           </Link>
+        
+        {/* NAVEGACIÓN Y CABECERA MEJORADA */}
+        <div className="mb-8">
+          <div className="flex items-center gap-2 mb-4">
+             <button 
+               onClick={() => router.back()}
+               className="bg-blue-100 text-blue-700 px-4 py-1.5 rounded-full font-black text-[10px] uppercase tracking-widest hover:bg-blue-200 transition-all cursor-pointer"
+             >
+               ← Atrás
+             </button>
+             <Link href="/">
+               <span className="bg-gray-200 text-gray-700 px-4 py-1.5 rounded-full font-black text-[10px] uppercase tracking-widest hover:bg-gray-300 transition-all cursor-pointer">
+                 🏠 Inicio
+               </span>
+             </Link>
+          </div>
+          <h1 className="text-4xl font-black text-blue-900 uppercase tracking-tighter">Directorio de Clientes</h1>
         </div>
         
         {/* BUSCADOR DE CLIENTES */}
