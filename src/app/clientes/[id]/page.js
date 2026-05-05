@@ -16,19 +16,12 @@ export default function FichaCliente({ params }) {
   const [cargando, setCargando] = useState(true)
   const [subiendoFoto, setSubiendoFoto] = useState(false)
   
-  // NUEVO: Estado para controlar qué pestaña está activa
   const [pestanaActiva, setPestanaActiva] = useState('fotos') 
-
-  const [editando, setEditando] = useState(false)
-  const [nuevoTelefono, setNuevoTelefono] = useState('')
-  const [nuevoEmail, setNuevoEmail] = useState('')
 
   const cargarDatos = async () => {
     const { data: clienteData } = await supabase.from('clientes').select('*').eq('dni', dniDeLaUrl).maybeSingle()
     if (clienteData) {
       setCliente(clienteData)
-      setNuevoTelefono(clienteData.telefono || '')
-      setNuevoEmail(clienteData.email || '')
       
       const { data: coches } = await supabase.from('vehiculos').select('*').eq('nombre_cliente', clienteData.nombre)
       setVehiculos(coches || [])
@@ -47,20 +40,39 @@ export default function FichaCliente({ params }) {
   const subirFoto = async (e) => {
     const archivo = e.target.files[0]
     if (!archivo) return
+
     setSubiendoFoto(true)
     const extension = archivo.name.split('.').pop()
     const nombreArchivo = `${dniDeLaUrl}-${Date.now()}.${extension}`
+
     try {
-      const { error: errorSubida } = await supabase.storage.from('fotos_coches').upload(nombreArchivo, archivo)
-      if (errorSubida) throw new Error(errorSubida.message)
+      // 1. Subida al Storage
+      const { error: errorSubida } = await supabase.storage
+        .from('fotos_coches')
+        .upload(nombreArchivo, archivo)
+      
+      if (errorSubida) throw new Error("Error Storage: " + errorSubida.message)
+
+      // 2. Obtener URL
       const { data: urlPublica } = supabase.storage.from('fotos_coches').getPublicUrl(nombreArchivo)
-      await supabase.from('fotos_coches').insert([{ dni_cliente: dniDeLaUrl, url: urlPublica.publicUrl }])
+
+      // 3. Insertar en Tabla
+      const { error: errorTabla } = await supabase.from('fotos_coches').insert([
+        { dni_cliente: dniDeLaUrl, url: urlPublica.publicUrl }
+      ])
+
+      if (errorTabla) throw new Error("Error Tabla: " + errorTabla.message)
+
+      // 4. Éxito
       await cargarDatos()
-      setPestanaActiva('fotos') // Ir a fotos al terminar
+      setPestanaActiva('fotos') // Nos aseguramos de estar en la pestaña de fotos para ver el resultado
+      alert("✅ Foto guardada correctamente")
+
     } catch (err) {
-      alert("Error: " + err.message)
+      alert("❌ Error: " + err.message)
     } finally {
       setSubiendoFoto(false)
+      if (fileInputRef.current) fileInputRef.current.value = "" 
     }
   }
 
@@ -91,10 +103,23 @@ export default function FichaCliente({ params }) {
           </div>
           
           <div className="flex flex-wrap gap-3">
-             <button onClick={() => fileInputRef.current.click()} disabled={subiendoFoto} className="bg-orange-500 text-white px-8 py-4 rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-xl shadow-orange-200 hover:bg-orange-600 active:scale-95 transition-all">
-                {subiendoFoto ? 'Subiendo...' : '📸 Subir Foto'}
+             {/* BOTÓN NARANJA DE SUBIDA */}
+             <button 
+                onClick={() => fileInputRef.current?.click()} 
+                disabled={subiendoFoto} 
+                className="bg-orange-500 text-white px-8 py-4 rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-xl shadow-orange-200 hover:bg-orange-600 active:scale-95 transition-all flex items-center gap-2"
+             >
+                {subiendoFoto ? '⌛ Subiendo...' : '📸 Subir Foto'}
              </button>
-             <input type="file" ref={fileInputRef} onChange={subirFoto} accept="image/*" capture="environment" className="hidden" />
+             {/* INPUT OCULTO - IMPORTANTE QUE ESTÉ AQUÍ */}
+             <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={subirFoto} 
+                accept="image/*" 
+                capture="environment" 
+                className="hidden" 
+             />
 
              <Link href={`/factura-nueva?cliente=${cliente.nombre}&dni=${cliente.dni}`}>
                 <button className="bg-black text-white px-8 py-4 rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-xl shadow-gray-300 hover:bg-gray-800 active:scale-95 transition-all">+ Factura</button>
@@ -104,7 +129,7 @@ export default function FichaCliente({ params }) {
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
           
-          {/* FICHA FIJA (IZQUIERDA) */}
+          {/* COLUMNA IZQUIERDA (INFO) */}
           <div className="lg:col-span-4">
             <div className="bg-white p-8 rounded-[2rem] shadow-xl shadow-gray-100 border border-gray-100 sticky top-8">
               <h2 className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-6 border-b pb-4 italic">Ficha de Contacto</h2>
@@ -126,11 +151,10 @@ export default function FichaCliente({ params }) {
             </div>
           </div>
 
-          {/* COMPARTIMENTOS / PESTAÑAS (DERECHA) */}
+          {/* COLUMNA DERECHA (COMPARTIMENTOS) */}
           <div className="lg:col-span-8">
-            <div className="bg-white rounded-[2rem] shadow-xl shadow-gray-100 border border-gray-100 overflow-hidden">
+            <div className="bg-white rounded-[2rem] shadow-xl shadow-gray-100 border border-gray-100 overflow-hidden min-h-[500px]">
               
-              {/* BOTONES DE COMPARTIMENTO */}
               <div className="flex border-b border-gray-100 p-2 gap-2 bg-gray-50/50">
                 <button onClick={() => setPestanaActiva('fotos')} className={`flex-1 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all ${pestanaActiva === 'fotos' ? 'bg-white text-blue-600 shadow-sm border border-gray-100' : 'text-gray-400 hover:text-gray-600'}`}>
                   🖼️ Fotos ({fotos.length})
@@ -143,17 +167,17 @@ export default function FichaCliente({ params }) {
                 </button>
               </div>
 
-              {/* CONTENIDO DINÁMICO */}
               <div className="p-8">
-                
-                {/* COMPARTIMENTO FOTOS */}
                 {pestanaActiva === 'fotos' && (
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 animate-in fade-in duration-300">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     {fotos.length === 0 ? (
-                      <p className="text-sm font-bold text-gray-300 italic py-10 text-center col-span-full">No hay fotos registradas para este cliente.</p>
+                      <div className="col-span-full py-20 text-center">
+                        <p className="text-4xl mb-4 opacity-20">📸</p>
+                        <p className="text-sm font-black text-gray-300 uppercase tracking-widest">Sin fotos todavía</p>
+                      </div>
                     ) : (
                       fotos.map(foto => (
-                        <div key={foto.id} className="relative group rounded-2xl overflow-hidden border-4 border-gray-50 aspect-square shadow-sm">
+                        <div key={foto.id} className="relative group rounded-2xl overflow-hidden border-4 border-gray-50 aspect-square shadow-sm bg-gray-100">
                           <img src={foto.url} alt="Coche" className="w-full h-full object-cover" />
                           <button onClick={() => borrarFoto(foto.id, foto.url)} className="absolute top-2 right-2 bg-red-500 text-white w-8 h-8 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all font-bold">✕</button>
                         </div>
@@ -162,15 +186,14 @@ export default function FichaCliente({ params }) {
                   </div>
                 )}
 
-                {/* COMPARTIMENTO FACTURAS */}
                 {pestanaActiva === 'facturas' && (
-                  <div className="space-y-4 animate-in fade-in duration-300">
+                  <div className="space-y-4">
                     {facturas.length === 0 ? (
-                      <p className="text-sm font-bold text-gray-300 italic py-10 text-center">No hay facturas o visitas registradas.</p>
+                      <p className="text-sm font-bold text-gray-300 italic py-10 text-center">No hay facturas.</p>
                     ) : (
                       facturas.map((f, i) => (
                         <Link key={f.id} href={`/factura-editar/${f.id}`}>
-                          <div className="flex items-center justify-between p-6 bg-gray-50 rounded-2xl border border-gray-100 hover:border-blue-200 hover:bg-blue-50 transition-all mb-3">
+                          <div className="flex items-center justify-between p-6 bg-gray-50 rounded-2xl border border-gray-100 hover:border-blue-200 hover:bg-blue-50 transition-all">
                             <div className="flex items-center gap-4">
                               <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-black text-[10px]">#{facturas.length - i}</div>
                               <div>
@@ -189,29 +212,20 @@ export default function FichaCliente({ params }) {
                   </div>
                 )}
 
-                {/* COMPARTIMENTO VEHÍCULOS */}
                 {pestanaActiva === 'vehiculos' && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in duration-300">
-                    {vehiculos.length === 0 ? (
-                      <p className="text-sm font-bold text-gray-300 italic py-10 text-center col-span-full">Este cliente no tiene vehículos asignados.</p>
-                    ) : (
-                      vehiculos.map(v => (
-                        <div key={v.id} className="p-6 bg-gray-900 text-white rounded-3xl flex justify-between items-center shadow-lg">
-                          <div>
-                            <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">Vehículo</p>
-                            <p className="font-black text-lg uppercase leading-tight">{v.marca_modelo}</p>
-                            <p className="text-blue-300 font-black text-xs mt-2 bg-blue-900/50 inline-block px-3 py-1 rounded-lg">{v.matricula}</p>
-                          </div>
-                          <div className="opacity-20 text-4xl">🚗</div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {vehiculos.map(v => (
+                      <div key={v.id} className="p-6 bg-gray-900 text-white rounded-3xl flex justify-between items-center">
+                        <div>
+                          <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">Vehículo</p>
+                          <p className="font-black text-lg uppercase">{v.marca_modelo}</p>
+                          <p className="text-blue-300 font-black text-xs mt-2 bg-blue-900/50 inline-block px-3 py-1 rounded-lg">{v.matricula}</p>
                         </div>
-                      ))
-                    )}
-                    <Link href={`/nuevo?cliente=${cliente.nombre}`} className="border-2 border-dashed border-gray-200 rounded-3xl flex items-center justify-center p-6 text-gray-400 font-black text-[10px] uppercase hover:bg-gray-50 transition-all">
-                      + Añadir Vehículo
-                    </Link>
+                        <div className="opacity-20 text-4xl">🚗</div>
+                      </div>
+                    ))}
                   </div>
                 )}
-
               </div>
             </div>
           </div>
