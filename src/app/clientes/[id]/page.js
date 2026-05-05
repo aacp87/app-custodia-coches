@@ -142,4 +142,4 @@ export default function FichaCliente({ params }) {
       `}</style>
     </div>
   )
-}
+} 
