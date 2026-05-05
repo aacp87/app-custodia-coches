@@ -7,7 +7,7 @@ import { QRCodeSVG } from 'qrcode.react'
 export default function FichaCliente({ params }) {
   const resolvedParams = use(params)
   const dniDeLaUrl = resolvedParams.id 
-  const fileInputRef = useRef(null) // Referencia para el botón de subir fotos
+  const fileInputRef = useRef(null)
 
   const [cliente, setCliente] = useState(null)
   const [vehiculos, setVehiculos] = useState([])
@@ -33,7 +33,8 @@ export default function FichaCliente({ params }) {
       const { data: factu } = await supabase.from('facturas').select('*').eq('dni_cliente', clienteData.dni).order('fecha', { ascending: false })
       setFacturas(factu || [])
 
-      const { data: fotosData } = await supabase.from('fotos_coches').select('*').eq('dni_cliente', clienteData.dni).order('created_at', { ascending: false })
+      // CARGAMOS FOTOS (Asegúrate que la columna se llama dni_cliente)
+      const { data: fotosData } = await supabase.from('fotos_coches').select('*').eq('dni_cliente', clienteData.dni).order('id', { ascending: false })
       setFotos(fotosData || [])
     }
     setCargando(false)
@@ -41,28 +42,52 @@ export default function FichaCliente({ params }) {
 
   useEffect(() => { if (dniDeLaUrl) cargarDatos() }, [dniDeLaUrl])
 
-  // FUNCIÓN PARA SUBIR LA FOTO
   const subirFoto = async (e) => {
     const archivo = e.target.files[0]
     if (!archivo) return
 
     setSubiendoFoto(true)
+    
+    // Generamos un nombre único para evitar conflictos de caché
     const extension = archivo.name.split('.').pop()
     const nombreArchivo = `${dniDeLaUrl}-${Date.now()}.${extension}`
 
-    const { error: errorSubida } = await supabase.storage.from('fotos_coches').upload(nombreArchivo, archivo)
-    
-    if (errorSubida) {
-      alert("Error al subir: Asegúrate de que el bucket 'fotos_coches' existe en Supabase y es Público.")
+    try {
+      // 1. Subida al Storage
+      const { error: errorSubida } = await supabase.storage
+        .from('fotos_coches')
+        .upload(nombreArchivo, archivo)
+      
+      if (errorSubida) throw new Error("Error en Storage: " + errorSubida.message)
+
+      // 2. Obtener URL Pública
+      const { data: urlPublica } = supabase.storage
+        .from('fotos_coches')
+        .getPublicUrl(nombreArchivo)
+
+      if (!urlPublica?.publicUrl) throw new Error("No se pudo generar la URL pública")
+
+      // 3. Insertar en la Tabla fotos_coches
+      const { error: errorTabla } = await supabase.from('fotos_coches').insert([
+        { 
+          dni_cliente: dniDeLaUrl, 
+          url: urlPublica.publicUrl 
+        }
+      ])
+
+      if (errorTabla) throw new Error("Error en Tabla: " + errorTabla.message)
+
+      // 4. Éxito: Recargamos datos
+      await cargarDatos()
+      alert("✅ Foto guardada correctamente")
+
+    } catch (err) {
+      console.error(err)
+      alert("❌ Error: " + err.message)
+    } finally {
       setSubiendoFoto(false)
-      return
+      if (fileInputRef.current) fileInputRef.current.value = "" // Limpiamos el input
     }
-
-    const { data: urlPublica } = supabase.storage.from('fotos_coches').getPublicUrl(nombreArchivo)
-    await supabase.from('fotos_coches').insert([{ dni_cliente: dniDeLaUrl, url: urlPublica.publicUrl }])
-
-    cargarDatos()
-    setSubiendoFoto(false)
   }
 
   const borrarFoto = async (id, url) => {
@@ -89,7 +114,6 @@ export default function FichaCliente({ params }) {
     <div className="p-4 md:p-8 bg-gray-50 min-h-screen text-gray-800">
       <div className="max-w-7xl mx-auto">
         
-        {/* CABECERA CON BOTONES PRINCIPALES */}
         <div className="flex flex-col md:flex-row justify-between items-start mb-8 gap-4">
           <div>
             <div className="flex items-center gap-2 mb-3 no-print">
@@ -99,9 +123,7 @@ export default function FichaCliente({ params }) {
             <h1 className="text-5xl font-black text-gray-800 uppercase tracking-tighter">{cliente.nombre}</h1>
           </div>
           
-          {/* BOTONES DE ACCIÓN PARA EL EMPLEADO */}
           <div className="flex flex-wrap gap-3 no-print">
-             {/* BOTÓN SUBIR FOTO NUEVO */}
              <button 
                 onClick={() => fileInputRef.current.click()}
                 disabled={subiendoFoto}
@@ -109,7 +131,8 @@ export default function FichaCliente({ params }) {
              >
                 {subiendoFoto ? '⌛ Subiendo...' : '📸 Subir Foto'}
              </button>
-<input type="file" ref={fileInputRef} onChange={subirFoto} accept="image/*" capture="environment" className="hidden" />
+             <input type="file" ref={fileInputRef} onChange={subirFoto} accept="image/*" capture="environment" className="hidden" />
+
              <Link href={`/nuevo?cliente=${cliente.nombre}`}>
                 <button className="bg-blue-600 text-white px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg hover:bg-blue-700 transition-all">+ Añadir Vehículo</button>
              </Link>
@@ -121,7 +144,6 @@ export default function FichaCliente({ params }) {
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           
-          {/* COLUMNA IZQUIERDA: CONTACTO */}
           <div className="lg:col-span-4 space-y-6">
             <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
               <div className="flex justify-between items-center mb-4">
@@ -153,10 +175,7 @@ export default function FichaCliente({ params }) {
             </div>
           </div>
 
-          {/* COLUMNA DERECHA: COCHES, FOTOS Y FACTURAS */}
           <div className="lg:col-span-8 space-y-6 no-print">
-            
-            {/* GALERÍA DE FOTOS */}
             <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
               <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-6">Estado del Vehículo (Fotos)</h2>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -176,7 +195,6 @@ export default function FichaCliente({ params }) {
               </div>
             </div>
 
-            {/* VEHÍCULOS */}
             <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
               <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-6">Vehículos en Custodia</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -191,7 +209,6 @@ export default function FichaCliente({ params }) {
               </div>
             </div>
 
-            {/* HISTORIAL FACTURAS */}
             <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
               <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-6">Historial de Visitas</h2>
               <div className="space-y-4">
