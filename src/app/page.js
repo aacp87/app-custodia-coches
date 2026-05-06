@@ -16,9 +16,12 @@ export default function Inicio() {
     es: {
       titulo: "AV MENORCA",
       subtitulo: "Tranquilidad total para tu vehículo",
-      titPrincipal: "Custodia de Coches, Motos y Barcos",
-      subPrincipal: "en Menorca",
-      descComercial: "Si necesitas custodiar tu vehículo durante tu ausencia, ofrecemos un servicio integral con la máxima seguridad. Nos encargamos de que esté perfecto para tu regreso.",
+      titPrincipal: "Custodia de Vehículos",
+      subPrincipal: "Premium en Menorca",
+      descComercial: "¿Tienes casa de vacaciones en la isla? Nosotros guardamos tu coche, moto o barco en nuestra nave segura y te lo entregamos lavado y a punto directamente en el aeropuerto a tu llegada.",
+      tag1: "✈️ Entrega en Aeropuerto",
+      tag2: "🛡️ Nave Segura",
+      tag3: "✨ Lavado Incluido",
       btnWhatsApp: "Contactar por WhatsApp",
       btnEmail: "Enviar Email",
       btnCliente: "🔑 Acceso Clientes",
@@ -46,9 +49,12 @@ export default function Inicio() {
     en: {
       titulo: "AV MENORCA",
       subtitulo: "Total peace of mind for your vehicle",
-      titPrincipal: "Custody of Cars, Bikes and Boats",
+      titPrincipal: "Premium Vehicle Custody",
       subPrincipal: "in Menorca",
-      descComercial: "If you need to store your vehicle while you are away, we offer a comprehensive service with maximum security. We make sure it's perfect for your return.",
+      descComercial: "Do you have a holiday home on the island? We store your car, bike or boat in our secure facility and deliver it clean and ready directly to the airport upon your arrival.",
+      tag1: "✈️ Airport Delivery",
+      tag2: "🛡️ Secure Facility",
+      tag3: "✨ Cleaning Included",
       btnWhatsApp: "Contact via WhatsApp",
       btnEmail: "Send Email",
       btnCliente: "🔑 Client Access",
@@ -96,7 +102,6 @@ export default function Inicio() {
     }
   }
 
-  // --- VISTA 1: EL PANEL DE ADMINISTRADOR ---
   if (modo === 'admin-panel') {
     return (
       <div className="p-4 md:p-8 bg-gray-50 min-h-screen text-gray-800 font-sans">
@@ -133,28 +138,26 @@ export default function Inicio() {
     )
   }
 
-  // --- VISTA 2: LA PÁGINA DE INICIO COMERCIAL ---
   return (
     <div className="relative min-h-screen bg-gray-900 font-sans overflow-hidden">
       
-      {/* IMAGEN DE FONDO Y FILTRO OSCURO */}
+      {/* IMAGEN DE FONDO PREMIUM (Coche de lujo / ambiente elegante) */}
       <div className="absolute inset-0 z-0">
         <img
-          src="https://images.unsplash.com/photo-1559564478-eeb669149171?q=80&w=2070&auto=format&fit=crop" 
-          alt="Costa de Menorca"
-          className="w-full h-full object-cover opacity-50"
+          src="https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?q=80&w=2083&auto=format&fit=crop" 
+          alt="Coche premium custodia Menorca"
+          className="w-full h-full object-cover opacity-60 scale-105"
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-blue-950/90 via-blue-900/60 to-gray-900"></div>
+        {/* Degradado para oscurecer y que el texto se lea perfecto */}
+        <div className="absolute inset-0 bg-gradient-to-b from-blue-950/90 via-gray-900/70 to-black/90"></div>
       </div>
 
-      {/* BARRA DE NAVEGACIÓN SUPERIOR */}
       <header className="relative z-50 w-full p-6 md:px-12 flex flex-col sm:flex-row justify-between items-center gap-4 border-b border-white/10">
         <div className="text-white font-black text-3xl tracking-tighter drop-shadow-md">
           {lang.titulo}
         </div>
         
         <div className="flex items-center gap-3 flex-wrap justify-center">
-          {/* SELECTOR DE IDIOMA INTEGRADO ARRIBA */}
           <div className="flex gap-1 bg-white/10 backdrop-blur-md p-1 rounded-full border border-white/20 mr-2">
             <button onClick={() => setIdioma('es')} className={`px-3 py-1 rounded-full text-xs font-black transition-all ${idioma === 'es' ? 'bg-white text-blue-900' : 'text-white hover:bg-white/20'}`}>ES</button>
             <button onClick={() => setIdioma('en')} className={`px-3 py-1 rounded-full text-xs font-black transition-all ${idioma === 'en' ? 'bg-white text-blue-900' : 'text-white hover:bg-white/20'}`}>EN</button>
@@ -169,10 +172,8 @@ export default function Inicio() {
         </div>
       </header>
 
-      {/* CONTENIDO DINÁMICO */}
-      <main className="relative z-10 flex flex-col items-center justify-center min-h-[80vh] px-4 text-center max-w-5xl mx-auto">
+      <main className="relative z-10 flex flex-col items-center justify-center min-h-[80vh] px-4 text-center max-w-5xl mx-auto py-10">
         
-        {/* MODO INICIO COMERCIAL (Landing Page) */}
         {modo === 'inicio' && (
           <div className="animate-in fade-in zoom-in duration-500">
             <span className="text-blue-400 font-black tracking-[0.4em] uppercase text-xs sm:text-sm mb-6 block drop-shadow-lg">
@@ -186,24 +187,30 @@ export default function Inicio() {
               </span>
             </h1>
             
-            <p className="text-lg md:text-xl text-gray-200 mb-12 font-medium max-w-2xl mx-auto leading-relaxed drop-shadow-md">
+            {/* TEXTO DE VENTAS (Casa de vacaciones / Aeropuerto) */}
+            <p className="text-lg md:text-2xl text-gray-200 mb-8 font-medium max-w-3xl mx-auto leading-relaxed drop-shadow-md">
               {lang.descComercial}
             </p>
 
+            {/* ETIQUETAS DE SERVICIOS (Tags) */}
+            <div className="flex flex-wrap justify-center gap-3 mb-12">
+              <span className="bg-white/10 border border-white/20 text-white px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest backdrop-blur-sm">{lang.tag1}</span>
+              <span className="bg-white/10 border border-white/20 text-white px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest backdrop-blur-sm">{lang.tag2}</span>
+              <span className="bg-white/10 border border-white/20 text-white px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest backdrop-blur-sm">{lang.tag3}</span>
+            </div>
+
             <div className="flex flex-col sm:flex-row justify-center items-center gap-4 w-full sm:w-auto">
-              {/* OJO: Cambia los números por tu WhatsApp */}
-              <a href="https://wa.me/34600000000" target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto bg-green-500 text-white px-8 py-5 rounded-full font-black text-xs uppercase tracking-widest hover:bg-green-600 hover:scale-105 transition-all flex items-center justify-center gap-3">
+              <a href="https://wa.me/34600000000" target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto bg-green-500 text-white px-8 py-5 rounded-full font-black text-xs uppercase tracking-widest hover:bg-green-600 hover:scale-105 transition-all flex items-center justify-center gap-3 shadow-xl shadow-green-500/20">
                 <span className="text-xl">💬</span> {lang.btnWhatsApp}
               </a>
-              {/* OJO: Cambia el email por el tuyo */}
-              <a href="mailto:info@avmenorca.com" className="w-full sm:w-auto bg-white text-blue-950 px-8 py-5 rounded-full font-black text-xs uppercase tracking-widest hover:bg-gray-100 hover:scale-105 transition-all flex items-center justify-center gap-3">
+              <a href="mailto:info@avmenorca.com" className="w-full sm:w-auto bg-white text-blue-950 px-8 py-5 rounded-full font-black text-xs uppercase tracking-widest hover:bg-gray-100 hover:scale-105 transition-all flex items-center justify-center gap-3 shadow-xl shadow-white/10">
                 <span className="text-xl">✉️</span> {lang.btnEmail}
               </a>
             </div>
           </div>
         )}
 
-        {/* POP-UP LOGIN CLIENTE */}
+        {/* ... (POP-UPS DE LOGIN SIGUEN EXACTAMENTE IGUAL) ... */}
         {modo === 'login-cliente' && (
           <div className="bg-white p-8 rounded-[2rem] shadow-2xl max-w-md mx-auto w-full animate-in slide-in-from-bottom-4 duration-300">
             <div className="text-5xl mb-4">🔑</div>
@@ -216,20 +223,17 @@ export default function Inicio() {
           </div>
         )}
 
-        {/* POP-UP LOGIN EMPLEADO */}
         {modo === 'login-admin' && (
           <div className="bg-white p-8 rounded-[2rem] shadow-2xl max-w-md mx-auto w-full animate-in slide-in-from-bottom-4 duration-300">
             <div className="text-5xl mb-4">💼</div>
             <h2 className="text-2xl font-black text-gray-800 uppercase tracking-tight mb-2">{lang.loginEmpTit}</h2>
             <p className="text-xs font-bold text-gray-500 mb-6 uppercase tracking-widest">{lang.loginEmpSub}</p>
-            {/* OJO: El PIN está configurado como '1234' en la función entrarComoAdmin */}
             <input type="password" placeholder="PIN" value={pin} onChange={(e) => setPin(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && entrarComoAdmin()} className="w-full p-4 mb-4 border-2 border-gray-100 rounded-xl font-black text-gray-800 text-center tracking-[1em] focus:border-black outline-none" />
             {errorAcceso && <p className="text-red-500 text-[10px] font-black uppercase mb-4 tracking-widest">{errorAcceso}</p>}
             <button onClick={entrarComoAdmin} className="w-full bg-black text-white p-4 rounded-xl font-black uppercase tracking-widest hover:bg-gray-800 transition-all">{lang.btnEntrarEmp}</button>
             <button onClick={() => {setModo('inicio'); setErrorAcceso('');}} className="w-full text-gray-400 font-bold text-xs mt-4 hover:text-gray-600 uppercase tracking-widest">{lang.btnVolver}</button>
           </div>
         )}
-
       </main>
     </div>
   )
