@@ -146,12 +146,20 @@ export default function AdminClaves() {
                   <button onClick={() => togglePass(c.id)} className="text-gray-300 hover:text-white transition-all text-sm">{verPass[c.id] ? 'Ocultar 👁️‍🗨️' : 'Ver 👁️'}</button>
                 </div>
                 
-                {/* MODO EDICIÓN DE CONTRASEÑA */}
+                {/* MODO EDICIÓN DE CONTRASEÑA - ARREGLADO EL COLOR */}
                 {editandoId === c.id ? (
-                  <div className="flex gap-2">
-                    <input type="text" autoFocus value={nuevaPass} onChange={(e) => setNuevaPass(e.target.value)} className="w-full p-2 rounded-lg text-sm font-black text-gray-900 outline-none" placeholder="Nueva clave..." />
-                    <button onClick={() => guardarContrasena(c.id)} className="bg-green-500 text-white px-3 rounded-lg font-black text-xs hover:bg-green-600">✓</button>
-                    <button onClick={() => setEditandoId(null)} className="bg-red-500 text-white px-3 rounded-lg font-black text-xs hover:bg-red-600">✕</button>
+                  <div className="flex gap-2 animate-in fade-in zoom-in duration-200">
+                    <input 
+                      type="text" 
+                      autoFocus 
+                      value={nuevaPass} 
+                      onChange={(e) => setNuevaPass(e.target.value)} 
+                      // HE AÑADIDO: bg-white text-gray-900
+                      className="w-full p-2 rounded-lg text-sm font-black bg-white text-gray-900 outline-none border-2 border-blue-500 shadow-inner" 
+                      placeholder="Nueva clave..." 
+                    />
+                    <button onClick={() => guardarContrasena(c.id)} className="bg-green-500 text-white px-3 rounded-lg font-black text-xs hover:bg-green-600 transition-all">✓</button>
+                    <button onClick={() => setEditandoId(null)} className="bg-red-500 text-white px-3 rounded-lg font-black text-xs hover:bg-red-600 transition-all">✕</button>
                   </div>
                 ) : (
                   <div className="flex justify-between items-center">
@@ -163,9 +171,9 @@ export default function AdminClaves() {
                 )}
               </div>
 
-              {/* BOTÓN BORRAR (Peligro) */}
-              <div>
-                <button onClick={() => borrarEmpleado(c.id, c.empleado)} className="text-red-300 hover:text-red-500 text-xl transition-all" title="Eliminar empleado">🗑️</button>
+              {/* BOTÓN BORRAR */}
+              <div className="flex-none text-right">
+                <button onClick={() => borrarEmpleado(c.id, c.empleado)} className="text-red-300 hover:text-red-500 text-xl transition-all p-2 rounded-lg hover:bg-red-50" title="Eliminar empleado">🗑️</button>
               </div>
 
             </div>
