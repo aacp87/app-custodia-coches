@@ -200,10 +200,10 @@ export default function Inicio() {
             </div>
 
             <div className="flex flex-col sm:flex-row justify-center items-center gap-4 w-full sm:w-auto">
-              <a href="https://wa.me/34600000000" target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto bg-green-500 text-white px-8 py-5 rounded-full font-black text-xs uppercase tracking-widest hover:bg-green-600 hover:scale-105 transition-all flex items-center justify-center gap-3 shadow-xl shadow-green-500/20">
+              <a href="https://wa.me/34609629380" target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto bg-green-500 text-white px-8 py-5 rounded-full font-black text-xs uppercase tracking-widest hover:bg-green-600 hover:scale-105 transition-all flex items-center justify-center gap-3 shadow-xl shadow-green-500/20">
                 <span className="text-xl">💬</span> {lang.btnWhatsApp}
               </a>
-              <a href="mailto:info@avmenorca.com" className="w-full sm:w-auto bg-white text-blue-950 px-8 py-5 rounded-full font-black text-xs uppercase tracking-widest hover:bg-gray-100 hover:scale-105 transition-all flex items-center justify-center gap-3 shadow-xl shadow-white/10">
+              <a href="mailto:avictoria@infotelecom.es" className="w-full sm:w-auto bg-white text-blue-950 px-8 py-5 rounded-full font-black text-xs uppercase tracking-widest hover:bg-gray-100 hover:scale-105 transition-all flex items-center justify-center gap-3 shadow-xl shadow-white/10">
                 <span className="text-xl">✉️</span> {lang.btnEmail}
               </a>
             </div>
