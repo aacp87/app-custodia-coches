@@ -15,18 +15,26 @@ export default function FichaCliente({ params }) {
   const [fotos, setFotos] = useState([])
   const [cargando, setCargando] = useState(true)
   const [subiendoFoto, setSubiendoFoto] = useState(false)
-  
-  // CAMBIO: Ahora la pestaña inicial es 'vehiculos'
   const [pestanaActiva, setPestanaActiva] = useState('vehiculos') 
+  
+  const [editando, setEditando] = useState(false)
+  const [nuevoTelefono, setNuevoTelefono] = useState('')
+  const [nuevoEmail, setNuevoEmail] = useState('')
+
+  // NUEVO: Estado para saber si es jefe (rango >= 9)
+  const [esJefe, setEsJefe] = useState(false)
 
   const cargarDatos = async () => {
     const { data: clienteData } = await supabase.from('clientes').select('*').eq('dni', dniDeLaUrl).maybeSingle()
     if (clienteData) {
       setCliente(clienteData)
+      setNuevoTelefono(clienteData.telefono || '')
+      setNuevoEmail(clienteData.email || '')
       
       const { data: coches } = await supabase.from('vehiculos').select('*').eq('nombre_cliente', clienteData.nombre)
       setVehiculos(coches || [])
       
+      // Cargamos facturas (las ocultaremos después visualmente si no es jefe)
       const { data: factu } = await supabase.from('facturas').select('*').eq('dni_cliente', clienteData.dni).order('fecha', { ascending: false })
       setFacturas(factu || [])
 
@@ -36,7 +44,13 @@ export default function FichaCliente({ params }) {
     setCargando(false)
   }
 
-  useEffect(() => { if (dniDeLaUrl) cargarDatos() }, [dniDeLaUrl])
+  useEffect(() => { 
+    // Al cargar la página, leemos el rol guardado en localStorage
+    const rango = localStorage.getItem('rangoEmpleado')
+    if (rango >= 9) setEsJefe(true)
+
+    if (dniDeLaUrl) cargarDatos() 
+  }, [dniDeLaUrl])
 
   const subirFoto = async (e) => {
     const archivo = e.target.files[0]
@@ -50,7 +64,7 @@ export default function FichaCliente({ params }) {
       const { data: urlPublica } = supabase.storage.from('fotos_coches').getPublicUrl(nombreArchivo)
       await supabase.from('fotos_coches').insert([{ dni_cliente: dniDeLaUrl, url: urlPublica.publicUrl }])
       await cargarDatos()
-      setPestanaActiva('fotos') // Al subir una foto, saltamos a la pestaña de fotos para verla
+      setPestanaActiva('fotos') 
       alert("✅ Foto guardada")
     } catch (err) {
       alert("Error: " + err.message)
@@ -60,11 +74,24 @@ export default function FichaCliente({ params }) {
   }
 
   const borrarFoto = async (id, url) => {
+    // Solo permitimos borrar si es jefe
+    if (!esJefe) {
+        alert("No tienes permisos para borrar fotos. Contacta con el administrador.")
+        return
+    }
     if (confirm('¿Borrar esta fotografía?')) {
       const nombreArchivo = url.split('/').pop()
       await supabase.storage.from('fotos_coches').remove([nombreArchivo])
       await supabase.from('fotos_coches').delete().eq('id', id)
       cargarDatos()
+    }
+  }
+
+  const guardarContacto = async () => {
+    const { error } = await supabase.from('clientes').update({ telefono: nuevoTelefono, email: nuevoEmail }).eq('dni', dniDeLaUrl)
+    if (!error) {
+      setCliente({ ...cliente, telefono: nuevoTelefono, email: nuevoEmail })
+      setEditando(false) 
     }
   }
 
@@ -91,28 +118,53 @@ export default function FichaCliente({ params }) {
              </button>
              <input type="file" ref={fileInputRef} onChange={subirFoto} accept="image/*" capture="environment" className="hidden" />
 
-             <Link href={`/factura-nueva?cliente=${cliente.nombre}&dni=${cliente.dni}`}>
-                <button className="bg-black text-white px-8 py-4 rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-xl shadow-gray-300 hover:bg-gray-800 active:scale-95 transition-all">+ Factura</button>
-             </Link>
+             {/* SOLO EL JEFE VE EL BOTÓN DE CREAR FACTURA */}
+             {esJefe && (
+                 <Link href={`/factura-nueva?cliente=${cliente.nombre}&dni=${cliente.dni}`}>
+                    <button className="bg-black text-white px-8 py-4 rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-xl shadow-gray-300 hover:bg-gray-800 active:scale-95 transition-all">+ Factura</button>
+                 </Link>
+             )}
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
           
-          {/* COLUMNA IZQUIERDA */}
+          {/* COLUMNA IZQUIERDA (FICHA) */}
           <div className="lg:col-span-4">
             <div className="bg-white p-8 rounded-[2rem] shadow-xl shadow-gray-100 border border-gray-100 sticky top-8">
-              <h2 className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-6 border-b pb-4 italic">Ficha de Contacto</h2>
-              <div className="space-y-4 mb-8">
-                <div>
-                    <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest mb-1">DNI del Titular</p>
-                    <p className="text-xl font-black text-gray-800">{cliente.dni}</p>
-                </div>
-                <div>
-                    <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest mb-1">Teléfono</p>
-                    <p className="text-xl font-black text-gray-800">{cliente.telefono || '---'}</p>
-                </div>
+              <div className="flex justify-between items-center mb-6 border-b pb-4">
+                <h2 className="text-[10px] font-black text-blue-600 uppercase tracking-widest italic">Ficha de Contacto</h2>
+                
+                {/* SOLO EL JEFE VE EL BOTÓN DE EDITAR */}
+                {esJefe && !editando && (
+                  <button onClick={() => setEditando(true)} className="text-[9px] font-black uppercase text-blue-500 hover:text-blue-700 bg-blue-50 px-2 py-1 rounded">✏️ Editar</button>
+                )}
+                {esJefe && editando && (
+                  <button onClick={guardarContacto} className="text-[9px] font-black uppercase text-green-600 hover:text-green-800 bg-green-50 px-2 py-1 rounded">💾 Guardar</button>
+                )}
               </div>
+
+              {editando ? (
+                <div className="space-y-3 mb-8 bg-gray-50 p-4 rounded-2xl border border-gray-200">
+                  <input type="text" value={nuevoTelefono} onChange={(e) => setNuevoTelefono(e.target.value)} className="w-full p-2 border rounded text-xs font-bold" placeholder="Teléfono" />
+                  <input type="email" value={nuevoEmail} onChange={(e) => setNuevoEmail(e.target.value)} className="w-full p-2 border rounded text-xs font-bold" placeholder="Email" />
+                </div>
+              ) : (
+                <div className="space-y-4 mb-8">
+                  <div>
+                      <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest mb-1">DNI del Titular</p>
+                      <p className="text-xl font-black text-gray-800">{cliente.dni}</p>
+                  </div>
+                  <div>
+                      <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest mb-1">Teléfono</p>
+                      <p className="text-xl font-black text-gray-800">{cliente.telefono || '---'}</p>
+                  </div>
+                  <div>
+                      <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest mb-1">Email</p>
+                      <p className="font-bold text-blue-600 text-sm break-all">{cliente.email || '---'}</p>
+                  </div>
+                </div>
+              )}
 
               <div className="bg-gray-50 p-6 rounded-3xl border border-gray-100 flex flex-col items-center">
                 <QRCodeSVG value={`https://avmenorca.com/clientes/${cliente.dni}`} size={140} level={"H"} />
@@ -121,18 +173,22 @@ export default function FichaCliente({ params }) {
             </div>
           </div>
 
-          {/* COLUMNA DERECHA REORDENADA */}
+          {/* COLUMNA DERECHA (PESTAÑAS) */}
           <div className="lg:col-span-8">
             <div className="bg-white rounded-[2rem] shadow-xl shadow-gray-100 border border-gray-100 overflow-hidden min-h-[500px]">
               
-              {/* SELECTOR DE PESTAÑAS REORDENADO */}
               <div className="flex border-b border-gray-100 p-2 gap-2 bg-gray-50/50">
                 <button onClick={() => setPestanaActiva('vehiculos')} className={`flex-1 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all ${pestanaActiva === 'vehiculos' ? 'bg-white text-blue-600 shadow-sm border border-gray-100' : 'text-gray-400 hover:text-gray-600'}`}>
                   🚗 Vehículos ({vehiculos.length})
                 </button>
-                <button onClick={() => setPestanaActiva('facturas')} className={`flex-1 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all ${pestanaActiva === 'facturas' ? 'bg-white text-blue-600 shadow-sm border border-gray-100' : 'text-gray-400 hover:text-gray-600'}`}>
-                  📄 Facturas ({facturas.length})
-                </button>
+                
+                {/* SOLO EL JEFE VE LA PESTAÑA FACTURAS */}
+                {esJefe && (
+                    <button onClick={() => setPestanaActiva('facturas')} className={`flex-1 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all ${pestanaActiva === 'facturas' ? 'bg-white text-blue-600 shadow-sm border border-gray-100' : 'text-gray-400 hover:text-gray-600'}`}>
+                      📄 Facturas ({facturas.length})
+                    </button>
+                )}
+
                 <button onClick={() => setPestanaActiva('fotos')} className={`flex-1 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all ${pestanaActiva === 'fotos' ? 'bg-white text-blue-600 shadow-sm border border-gray-100' : 'text-gray-400 hover:text-gray-600'}`}>
                   🖼️ Fotos ({fotos.length})
                 </button>
@@ -140,7 +196,7 @@ export default function FichaCliente({ params }) {
 
               <div className="p-8">
                 
-                {/* 1. VEHÍCULOS (PRIMERO) */}
+                {/* COMPARTIMENTO VEHÍCULOS */}
                 {pestanaActiva === 'vehiculos' && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {vehiculos.length === 0 ? (
@@ -157,14 +213,16 @@ export default function FichaCliente({ params }) {
                         </div>
                       ))
                     )}
-                    <Link href={`/nuevo?cliente=${cliente.nombre}`} className="border-2 border-dashed border-gray-200 rounded-3xl flex items-center justify-center p-6 text-gray-400 font-black text-[10px] uppercase hover:bg-gray-50 transition-all">
-                      + Añadir Vehículo
-                    </Link>
+                    {esJefe && (
+                        <Link href={`/nuevo?cliente=${cliente.nombre}`} className="border-2 border-dashed border-gray-200 rounded-3xl flex items-center justify-center p-6 text-gray-400 font-black text-[10px] uppercase hover:bg-gray-50 transition-all">
+                          + Añadir Vehículo
+                        </Link>
+                    )}
                   </div>
                 )}
 
-                {/* 2. FACTURAS (SEGUNDO) */}
-                {pestanaActiva === 'facturas' && (
+                {/* COMPARTIMENTO FACTURAS (SOLO JEFE) */}
+                {pestanaActiva === 'facturas' && esJefe && (
                   <div className="space-y-4">
                     {facturas.length === 0 ? (
                       <p className="text-sm font-bold text-gray-300 italic py-10 text-center">No hay facturas registradas.</p>
@@ -190,7 +248,7 @@ export default function FichaCliente({ params }) {
                   </div>
                 )}
 
-                {/* 3. FOTOS (TERCERO) */}
+                {/* COMPARTIMENTO FOTOS */}
                 {pestanaActiva === 'fotos' && (
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     {fotos.length === 0 ? (
@@ -202,7 +260,11 @@ export default function FichaCliente({ params }) {
                       fotos.map(foto => (
                         <div key={foto.id} className="relative group rounded-2xl overflow-hidden border-4 border-gray-50 aspect-square shadow-sm bg-gray-100">
                           <img src={foto.url} alt="Coche" className="w-full h-full object-cover" />
-                          <button onClick={() => borrarFoto(foto.id, foto.url)} className="absolute top-2 right-2 bg-red-500 text-white w-8 h-8 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all font-bold">✕</button>
+                          
+                          {/* SOLO EL JEFE PUEDE BORRAR FOTOS (El botón 'X' solo sale si eres jefe) */}
+                          {esJefe && (
+                              <button onClick={() => borrarFoto(foto.id, foto.url)} className="absolute top-2 right-2 bg-red-500 text-white w-8 h-8 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all font-bold">✕</button>
+                          )}
                         </div>
                       ))
                     )}
