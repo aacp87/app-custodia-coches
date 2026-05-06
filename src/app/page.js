@@ -9,18 +9,20 @@ export default function Inicio() {
   const [pin, setPin] = useState('')
   const [dni, setDni] = useState('')
   const [errorAcceso, setErrorAcceso] = useState('')
-  const [idioma, setIdioma] = useState('es') // 'es' o 'en'
+  const [idioma, setIdioma] = useState('es')
   const router = useRouter()
 
-  // --- DICCIONARIO DE TRADUCCIONES ---
   const t = {
     es: {
       titulo: "AV MENORCA",
-      subtitulo: "Custodia de Vehículos en Menorca",
-      btnCliente: "Soy Cliente",
-      descCliente: "Gestiona las fechas de tu vehículo.",
-      btnEmp: "Empleados",
-      descEmp: "Acceso interno al sistema.",
+      subtitulo: "Tranquilidad total para tu vehículo",
+      titPrincipal: "Custodia de Coches, Motos y Barcos",
+      subPrincipal: "en Menorca",
+      descComercial: "Si necesitas custodiar tu vehículo durante tu ausencia, ofrecemos un servicio integral con la máxima seguridad. Nos encargamos de que esté perfecto para tu regreso.",
+      btnWhatsApp: "Contactar por WhatsApp",
+      btnEmail: "Enviar Email",
+      btnCliente: "🔑 Acceso Clientes",
+      btnEmp: "💼 Empleados",
       loginCliTit: "Acceso Clientes",
       loginCliSub: "Introduce tu DNI/Pasaporte",
       loginCliPlace: "Ej: 12345678Z",
@@ -43,11 +45,14 @@ export default function Inicio() {
     },
     en: {
       titulo: "AV MENORCA",
-      subtitulo: "Vehicle Custody in Menorca",
-      btnCliente: "I am a Client",
-      descCliente: "Manage your vehicle's dates.",
-      btnEmp: "Employees",
-      descEmp: "Internal system access.",
+      subtitulo: "Total peace of mind for your vehicle",
+      titPrincipal: "Custody of Cars, Bikes and Boats",
+      subPrincipal: "in Menorca",
+      descComercial: "If you need to store your vehicle while you are away, we offer a comprehensive service with maximum security. We make sure it's perfect for your return.",
+      btnWhatsApp: "Contact via WhatsApp",
+      btnEmail: "Send Email",
+      btnCliente: "🔑 Client Access",
+      btnEmp: "💼 Employees",
       loginCliTit: "Client Access",
       loginCliSub: "Enter your ID/Passport",
       loginCliPlace: "Ex: 12345678Z",
@@ -85,7 +90,6 @@ export default function Inicio() {
     setErrorAcceso('')
     const { data } = await supabase.from('clientes').select('*').eq('dni', dni.trim().toUpperCase()).maybeSingle()
     if (data) {
-      // Pasamos el idioma por la URL para que el portal sepa en qué idioma abrirse
       router.push(`/mi-portal/${data.dni}?lang=${idioma}`) 
     } else {
       setErrorAcceso(lang.errDni)
@@ -129,43 +133,80 @@ export default function Inicio() {
     )
   }
 
-  // --- VISTA 2: LA PÁGINA DE INICIO PÚBLICA ---
+  // --- VISTA 2: LA PÁGINA DE INICIO COMERCIAL ---
   return (
-    <div className="min-h-screen bg-blue-900 bg-cover bg-center flex items-center justify-center relative font-sans" 
-         style={{ backgroundImage: "url('https://images.unsplash.com/photo-1516214846430-6d4f6470b107?q=80&w=2070')" }}>
+    <div className="relative min-h-screen bg-gray-900 font-sans overflow-hidden">
       
-      <div className="absolute inset-0 bg-blue-950/70 backdrop-blur-sm"></div>
-
-      {/* SELECTOR DE IDIOMA */}
-      <div className="absolute top-6 right-6 z-20 flex gap-2 bg-white/10 backdrop-blur-md p-2 rounded-full border border-white/20">
-        <button onClick={() => setIdioma('es')} className={`px-3 py-1 rounded-full text-xs font-black transition-all ${idioma === 'es' ? 'bg-white text-blue-900' : 'text-white hover:bg-white/20'}`}>🇪🇸 ES</button>
-        <button onClick={() => setIdioma('en')} className={`px-3 py-1 rounded-full text-xs font-black transition-all ${idioma === 'en' ? 'bg-white text-blue-900' : 'text-white hover:bg-white/20'}`}>🇬🇧 EN</button>
+      {/* IMAGEN DE FONDO Y FILTRO OSCURO */}
+      <div className="absolute inset-0 z-0">
+        <img
+          src="https://images.unsplash.com/photo-1559564478-eeb669149171?q=80&w=2070&auto=format&fit=crop" 
+          alt="Costa de Menorca"
+          className="w-full h-full object-cover opacity-50"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-blue-950/90 via-blue-900/60 to-gray-900"></div>
       </div>
 
-      <div className="relative z-10 w-full max-w-4xl p-6">
-        <div className="text-center mb-12">
-          <h1 className="text-6xl md:text-7xl font-black text-white uppercase tracking-tighter drop-shadow-xl">{lang.titulo}</h1>
-          <p className="text-blue-200 font-bold tracking-widest uppercase text-sm mt-4 drop-shadow-md">{lang.subtitulo}</p>
+      {/* BARRA DE NAVEGACIÓN SUPERIOR */}
+      <header className="relative z-50 w-full p-6 md:px-12 flex flex-col sm:flex-row justify-between items-center gap-4 border-b border-white/10">
+        <div className="text-white font-black text-3xl tracking-tighter drop-shadow-md">
+          {lang.titulo}
         </div>
+        
+        <div className="flex items-center gap-3 flex-wrap justify-center">
+          {/* SELECTOR DE IDIOMA INTEGRADO ARRIBA */}
+          <div className="flex gap-1 bg-white/10 backdrop-blur-md p-1 rounded-full border border-white/20 mr-2">
+            <button onClick={() => setIdioma('es')} className={`px-3 py-1 rounded-full text-xs font-black transition-all ${idioma === 'es' ? 'bg-white text-blue-900' : 'text-white hover:bg-white/20'}`}>ES</button>
+            <button onClick={() => setIdioma('en')} className={`px-3 py-1 rounded-full text-xs font-black transition-all ${idioma === 'en' ? 'bg-white text-blue-900' : 'text-white hover:bg-white/20'}`}>EN</button>
+          </div>
 
+          <button onClick={() => setModo('login-cliente')} className="text-[10px] font-black text-white uppercase tracking-widest bg-white/10 hover:bg-white/20 border border-white/20 px-6 py-3 rounded-full backdrop-blur-md transition-all">
+            {lang.btnCliente}
+          </button>
+          <button onClick={() => setModo('login-admin')} className="text-[10px] font-black text-white uppercase tracking-widest bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-full shadow-lg shadow-blue-900/50 transition-all">
+            {lang.btnEmp}
+          </button>
+        </div>
+      </header>
+
+      {/* CONTENIDO DINÁMICO */}
+      <main className="relative z-10 flex flex-col items-center justify-center min-h-[80vh] px-4 text-center max-w-5xl mx-auto">
+        
+        {/* MODO INICIO COMERCIAL (Landing Page) */}
         {modo === 'inicio' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
-            <div onClick={() => setModo('login-cliente')} className="bg-white/10 backdrop-blur-md p-8 rounded-3xl border border-white/20 hover:bg-white/20 transition-all cursor-pointer text-center group">
-              <div className="text-5xl mb-4 group-hover:scale-110 transition-transform">🔑</div>
-              <h2 className="text-xl font-black text-white uppercase tracking-tight">{lang.btnCliente}</h2>
-              <p className="text-xs text-blue-100 font-bold mt-2">{lang.descCliente}</p>
-            </div>
+          <div className="animate-in fade-in zoom-in duration-500">
+            <span className="text-blue-400 font-black tracking-[0.4em] uppercase text-xs sm:text-sm mb-6 block drop-shadow-lg">
+              {lang.subtitulo}
+            </span>
             
-            <div onClick={() => setModo('login-admin')} className="bg-white/10 backdrop-blur-md p-8 rounded-3xl border border-white/20 hover:bg-white/20 transition-all cursor-pointer text-center group">
-              <div className="text-5xl mb-4 group-hover:scale-110 transition-transform">💼</div>
-              <h2 className="text-xl font-black text-white uppercase tracking-tight">{lang.btnEmp}</h2>
-              <p className="text-xs text-blue-100 font-bold mt-2">{lang.descEmp}</p>
+            <h1 className="text-5xl md:text-7xl lg:text-8xl font-black text-white uppercase tracking-tighter mb-8 leading-[0.9]">
+              {lang.titPrincipal} <br/>
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300 drop-shadow-sm">
+                {lang.subPrincipal}
+              </span>
+            </h1>
+            
+            <p className="text-lg md:text-xl text-gray-200 mb-12 font-medium max-w-2xl mx-auto leading-relaxed drop-shadow-md">
+              {lang.descComercial}
+            </p>
+
+            <div className="flex flex-col sm:flex-row justify-center items-center gap-4 w-full sm:w-auto">
+              {/* OJO: Cambia los números por tu WhatsApp */}
+              <a href="https://wa.me/34600000000" target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto bg-green-500 text-white px-8 py-5 rounded-full font-black text-xs uppercase tracking-widest hover:bg-green-600 hover:scale-105 transition-all flex items-center justify-center gap-3">
+                <span className="text-xl">💬</span> {lang.btnWhatsApp}
+              </a>
+              {/* OJO: Cambia el email por el tuyo */}
+              <a href="mailto:info@avmenorca.com" className="w-full sm:w-auto bg-white text-blue-950 px-8 py-5 rounded-full font-black text-xs uppercase tracking-widest hover:bg-gray-100 hover:scale-105 transition-all flex items-center justify-center gap-3">
+                <span className="text-xl">✉️</span> {lang.btnEmail}
+              </a>
             </div>
           </div>
         )}
 
+        {/* POP-UP LOGIN CLIENTE */}
         {modo === 'login-cliente' && (
-          <div className="bg-white p-8 rounded-3xl shadow-2xl max-w-md mx-auto transform transition-all">
+          <div className="bg-white p-8 rounded-[2rem] shadow-2xl max-w-md mx-auto w-full animate-in slide-in-from-bottom-4 duration-300">
+            <div className="text-5xl mb-4">🔑</div>
             <h2 className="text-2xl font-black text-blue-900 uppercase tracking-tight mb-2">{lang.loginCliTit}</h2>
             <p className="text-xs font-bold text-gray-500 mb-6 uppercase tracking-widest">{lang.loginCliSub}</p>
             <input type="text" placeholder={lang.loginCliPlace} value={dni} onChange={(e) => setDni(e.target.value)} className="w-full p-4 mb-4 border-2 border-gray-100 rounded-xl font-black text-gray-800 uppercase focus:border-blue-500 outline-none" />
@@ -175,18 +216,21 @@ export default function Inicio() {
           </div>
         )}
 
+        {/* POP-UP LOGIN EMPLEADO */}
         {modo === 'login-admin' && (
-          <div className="bg-white p-8 rounded-3xl shadow-2xl max-w-md mx-auto transform transition-all">
+          <div className="bg-white p-8 rounded-[2rem] shadow-2xl max-w-md mx-auto w-full animate-in slide-in-from-bottom-4 duration-300">
+            <div className="text-5xl mb-4">💼</div>
             <h2 className="text-2xl font-black text-gray-800 uppercase tracking-tight mb-2">{lang.loginEmpTit}</h2>
             <p className="text-xs font-bold text-gray-500 mb-6 uppercase tracking-widest">{lang.loginEmpSub}</p>
-            <input type="password" placeholder="PIN" value={pin} onChange={(e) => setPin(e.target.value)} className="w-full p-4 mb-4 border-2 border-gray-100 rounded-xl font-black text-gray-800 text-center tracking-[1em] focus:border-black outline-none" />
+            {/* OJO: El PIN está configurado como '1234' en la función entrarComoAdmin */}
+            <input type="password" placeholder="PIN" value={pin} onChange={(e) => setPin(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && entrarComoAdmin()} className="w-full p-4 mb-4 border-2 border-gray-100 rounded-xl font-black text-gray-800 text-center tracking-[1em] focus:border-black outline-none" />
             {errorAcceso && <p className="text-red-500 text-[10px] font-black uppercase mb-4 tracking-widest">{errorAcceso}</p>}
             <button onClick={entrarComoAdmin} className="w-full bg-black text-white p-4 rounded-xl font-black uppercase tracking-widest hover:bg-gray-800 transition-all">{lang.btnEntrarEmp}</button>
             <button onClick={() => {setModo('inicio'); setErrorAcceso('');}} className="w-full text-gray-400 font-bold text-xs mt-4 hover:text-gray-600 uppercase tracking-widest">{lang.btnVolver}</button>
           </div>
         )}
 
-      </div>
+      </main>
     </div>
   )
 }
