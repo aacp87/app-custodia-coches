@@ -13,22 +13,14 @@ export default function FichaCliente({ params }) {
   const [vehiculos, setVehiculos] = useState([])
   const [facturas, setFacturas] = useState([])
   const [fotos, setFotos] = useState([])
-  const [catalogo, setCatalogo] = useState([]) // Catálogo de servicios
-  const [serviciosContratados, setServiciosContratados] = useState([]) // Servicios marcados por el cliente
-  
   const [cargando, setCargando] = useState(true)
   const [subiendoFoto, setSubiendoFoto] = useState(false)
   const [pestanaActiva, setPestanaActiva] = useState('vehiculos') 
   
   const [esJefe, setEsJefe] = useState(false)
-  const [notasEmpleado, setNotasEmpleado] = useState('')
   const [editando, setEditando] = useState(false)
   const [nuevoTelefono, setNuevoTelefono] = useState('')
   const [nuevoEmail, setNuevoEmail] = useState('')
-
-  // Estados para crear un servicio nuevo (Solo Jefe)
-  const [nuevoNombreServicio, setNuevoNombreServicio] = useState('')
-  const [nuevoPrecioServicio, setNuevoPrecioServicio] = useState('')
 
   const cargarDatos = async () => {
     const { data: clienteData } = await supabase.from('clientes').select('*').eq('dni', dniDeLaUrl).maybeSingle()
@@ -45,13 +37,6 @@ export default function FichaCliente({ params }) {
 
       const { data: fotosData } = await supabase.from('fotos_coches').select('*').eq('dni_cliente', clienteData.dni).order('id', { ascending: false })
       setFotos(fotosData || [])
-
-      // Cargar catálogo de servicios y lo que tiene este cliente
-      const { data: catData } = await supabase.from('catalogo_servicios').select('*').order('id')
-      setCatalogo(catData || [])
-      
-      const { data: servData } = await supabase.from('servicios_cliente').select('*').eq('dni_cliente', clienteData.dni)
-      setServiciosContratados(servData ? servData.map(s => s.servicio_id) : [])
     }
     setCargando(false)
   }
@@ -61,49 +46,6 @@ export default function FichaCliente({ params }) {
     if (rango >= 9) setEsJefe(true)
     if (dniDeLaUrl) cargarDatos() 
   }, [dniDeLaUrl])
-
-  // --- FUNCIONES DE SERVICIOS ADICIONALES ---
-  const toggleServicio = async (servicioId) => {
-    const yaContratado = serviciosContratados.includes(servicioId)
-    if (yaContratado) {
-      await supabase.from('servicios_cliente').delete().eq('dni_cliente', cliente.dni).eq('servicio_id', servicioId)
-      setServiciosContratados(prev => prev.filter(id => id !== servicioId))
-    } else {
-      await supabase.from('servicios_cliente').insert([{ dni_cliente: cliente.dni, servicio_id: servicioId }])
-      setServiciosContratados(prev => [...prev, servicioId])
-    }
-  }
-
-  const agregarAlCatalogo = async () => {
-    if (!nuevoNombreServicio || !nuevoPrecioServicio) return alert("Rellena nombre y precio")
-    await supabase.from('catalogo_servicios').insert([{ nombre: nuevoNombreServicio, precio: nuevoPrecioServicio }])
-    setNuevoNombreServicio('')
-    setNuevoPrecioServicio('')
-    cargarDatos()
-  }
-
-  const borrarDelCatalogo = async (id, nombre) => {
-    if (!esJefe) return
-    if (confirm(`⚠️ ¿Borrar "${nombre}" del catálogo de la empresa? Desaparecerá para todos los clientes.`)) {
-      await supabase.from('catalogo_servicios').delete().eq('id', id)
-      await supabase.from('servicios_cliente').delete().eq('servicio_id', id)
-      cargarDatos()
-    }
-  }
-
-  // --- FUNCIONES PARA ITV Y SERVICIO (Coches) ---
-  const actualizarTarea = async (vehiculoId, campo, valor) => {
-    const updateData = { [campo]: valor }
-    if (campo.includes('finalizado') && valor === true && notasEmpleado) {
-        updateData.notas_mecanicas = notasEmpleado
-    }
-    const { error } = await supabase.from('vehiculos').update(updateData).eq('id', vehiculoId)
-    if (!error) {
-        setNotasEmpleado('')
-        cargarDatos()
-        alert("✅ Estado actualizado")
-    }
-  }
 
   const subirFoto = async (e) => {
     const archivo = e.target.files[0]
@@ -145,7 +87,6 @@ export default function FichaCliente({ params }) {
     <div className="p-4 md:p-8 bg-gray-50 min-h-screen text-gray-800 font-sans">
       <div className="max-w-7xl mx-auto">
         
-        {/* CABECERA */}
         <div className="flex flex-col md:flex-row justify-between items-start mb-10 gap-6">
           <div>
             <div className="flex items-center gap-2 mb-4">
@@ -170,7 +111,6 @@ export default function FichaCliente({ params }) {
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
           
-          {/* INFO CLIENTE IZQUIERDA */}
           <div className="lg:col-span-4">
             <div className="bg-white p-8 rounded-[2rem] shadow-xl border border-gray-100 sticky top-8">
               <div className="flex justify-between items-center mb-6 border-b pb-4">
@@ -197,134 +137,49 @@ export default function FichaCliente({ params }) {
             </div>
           </div>
 
-          {/* COLUMNA DERECHA PESTAÑAS */}
           <div className="lg:col-span-8">
             <div className="bg-white rounded-[2rem] shadow-xl border border-gray-100 overflow-hidden min-h-[500px]">
               
-              {/* SELECTOR DE PESTAÑAS */}
               <div className="flex flex-wrap border-b border-gray-100 p-2 gap-2 bg-gray-50/50">
                 <button onClick={() => setPestanaActiva('vehiculos')} className={`flex-1 py-4 px-2 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all ${pestanaActiva === 'vehiculos' ? 'bg-white text-blue-600 shadow-sm border border-gray-100' : 'text-gray-400 hover:text-gray-600'}`}>
-                  🚗 Coches
-                </button>
-                <button onClick={() => setPestanaActiva('servicios')} className={`flex-1 py-4 px-2 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all ${pestanaActiva === 'servicios' ? 'bg-white text-blue-600 shadow-sm border border-gray-100' : 'text-gray-400 hover:text-gray-600'}`}>
-                  🛒 Servicios Extras
+                  🚗 Vehículos ({vehiculos.length})
                 </button>
                 {esJefe && (
                     <button onClick={() => setPestanaActiva('facturas')} className={`flex-1 py-4 px-2 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all ${pestanaActiva === 'facturas' ? 'bg-white text-blue-600 shadow-sm border border-gray-100' : 'text-gray-400 hover:text-gray-600'}`}>
-                      📄 Facturas
+                      📄 Facturas ({facturas.length})
                     </button>
                 )}
                 <button onClick={() => setPestanaActiva('fotos')} className={`flex-1 py-4 px-2 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all ${pestanaActiva === 'fotos' ? 'bg-white text-blue-600 shadow-sm border border-gray-100' : 'text-gray-400 hover:text-gray-600'}`}>
-                  🖼️ Fotos
+                  🖼️ Fotos ({fotos.length})
                 </button>
               </div>
 
               <div className="p-8">
                 
-                {/* 1. COMPARTIMENTO VEHÍCULOS (Tu código anterior intacto) */}
                 {pestanaActiva === 'vehiculos' && (
-                  <div className="space-y-8">
-                    {vehiculos.map(v => (
-                      <div key={v.id} className="p-6 bg-gray-50 rounded-[2rem] border border-gray-200">
-                        <div className="flex justify-between items-start mb-6">
-                            <div>
-                                <p className="text-[10px] font-black text-blue-500 uppercase mb-1 tracking-widest">Vehículo en Custodia</p>
-                                <h3 className="text-2xl font-black text-gray-900 uppercase leading-none">{v.marca_modelo}</h3>
-                                <span className="inline-block mt-2 bg-blue-900 text-white text-[10px] font-black px-3 py-1 rounded-lg">{v.matricula}</span>
-                            </div>
-                            <div className="text-4xl opacity-20">🚗</div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {/* CAJA ITV */}
-                            <div className={`p-4 rounded-2xl border-2 transition-all ${v.itv_solicitado ? 'bg-white border-orange-200 shadow-md' : 'bg-gray-100 border-transparent opacity-60'}`}>
-                                <p className="text-[10px] font-black uppercase mb-2">🔍 Inspección ITV</p>
-                                {!v.itv_solicitado ? (
-                                    esJefe ? <button onClick={() => actualizarTarea(v.id, 'itv_solicitado', true)} className="w-full bg-blue-600 text-white py-2 rounded-xl text-[9px] font-black uppercase">Solicitar ITV</button> : <p className="text-[9px] font-bold text-gray-400 italic">No solicitado</p>
-                                ) : v.itv_finalizado ? (
-                                    <div className="text-green-600 font-black text-[10px] flex items-center gap-2">✅ ITV REALIZADA</div>
-                                ) : (
-                                    <div className="space-y-3">
-                                        <div className="bg-orange-100 text-orange-700 font-black text-[9px] p-2 rounded-lg text-center animate-pulse">PENDIENTE DE ITV</div>
-                                        <textarea placeholder="¿Algún problema?" value={notasEmpleado} onChange={(e) => setNotasEmpleado(e.target.value)} className="w-full p-2 text-[10px] border rounded-lg h-12 outline-none focus:border-blue-400" />
-                                        <button onClick={() => actualizarTarea(v.id, 'itv_finalizado', true)} className="w-full bg-green-500 text-white py-2 rounded-xl text-[9px] font-black uppercase">Marcar como Hecho</button>
-                                    </div>
-                                )}
-                            </div>
-                            {/* CAJA SERVICIO */}
-                            <div className={`p-4 rounded-2xl border-2 transition-all ${v.servicio_solicitado ? 'bg-white border-blue-200 shadow-md' : 'bg-gray-100 border-transparent opacity-60'}`}>
-                                <p className="text-[10px] font-black uppercase mb-2">🛠️ Servicio / Mecánica</p>
-                                {!v.servicio_solicitado ? (
-                                    esJefe ? <button onClick={() => actualizarTarea(v.id, 'servicio_solicitado', true)} className="w-full bg-blue-600 text-white py-2 rounded-xl text-[9px] font-black uppercase">Solicitar Servicio</button> : <p className="text-[9px] font-bold text-gray-400 italic">No solicitado</p>
-                                ) : v.servicio_finalizado ? (
-                                    <div className="text-green-600 font-black text-[10px] flex items-center gap-2">✅ SERVICIO REALIZADO</div>
-                                ) : (
-                                    <div className="space-y-3">
-                                        <div className="bg-blue-100 text-blue-700 font-black text-[9px] p-2 rounded-lg text-center animate-pulse">PENDIENTE SERVICIO</div>
-                                        <textarea placeholder="¿Algún problema?" value={notasEmpleado} onChange={(e) => setNotasEmpleado(e.target.value)} className="w-full p-2 text-[10px] border rounded-lg h-12 outline-none focus:border-blue-400" />
-                                        <button onClick={() => actualizarTarea(v.id, 'servicio_finalizado', true)} className="w-full bg-green-500 text-white py-2 rounded-xl text-[9px] font-black uppercase">Marcar como Hecho</button>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                        {v.notas_mecanicas && (
-                            <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-2xl">
-                                <p className="text-[9px] font-black uppercase text-yellow-700 mb-1">Notas del operario:</p>
-                                <p className="text-xs font-bold text-gray-700">"{v.notas_mecanicas}"</p>
-                            </div>
-                        )}
-                      </div>
-                    ))}
-                    {esJefe && (<Link href={`/nuevo?cliente=${cliente.nombre}`} className="border-2 border-dashed border-gray-200 rounded-3xl flex items-center justify-center p-6 text-gray-400 font-black text-[10px] uppercase hover:bg-gray-50 transition-all">+ Añadir Vehículo</Link>)}
-                  </div>
-                )}
-
-                {/* 2. NUEVO: COMPARTIMENTO DE SERVICIOS ADICIONALES */}
-                {pestanaActiva === 'servicios' && (
-                  <div className="space-y-6 animate-in fade-in duration-300">
-                    <h2 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-6">Contratación de Servicios</h2>
-                    
-                    {catalogo.length === 0 ? (
-                      <p className="text-sm font-bold text-gray-300 italic text-center py-10">No hay servicios en el catálogo todavía.</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {vehiculos.length === 0 ? (
+                      <p className="text-sm font-bold text-gray-300 italic py-10 text-center col-span-full">No hay vehículos.</p>
                     ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {catalogo.map(item => {
-                          const estaContratado = serviciosContratados.includes(item.id)
-                          return (
-                            <div key={item.id} onClick={() => toggleServicio(item.id)} className={`relative p-5 rounded-2xl border-2 cursor-pointer transition-all flex justify-between items-center ${estaContratado ? 'bg-green-50 border-green-500 shadow-md' : 'bg-white border-gray-100 hover:border-blue-200'}`}>
-                              <div>
-                                <p className={`font-black uppercase text-sm ${estaContratado ? 'text-green-800' : 'text-gray-800'}`}>{item.nombre}</p>
-                                <p className={`text-xl font-black mt-1 ${estaContratado ? 'text-green-600' : 'text-blue-600'}`}>{item.precio}€</p>
-                              </div>
-                              <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-lg transition-all ${estaContratado ? 'bg-green-500 text-white scale-110' : 'bg-gray-100 text-gray-300'}`}>
-                                {estaContratado ? '✓' : ''}
-                              </div>
-
-                              {/* Botón borrar catálogo (Solo jefe) */}
-                              {esJefe && !estaContratado && (
-                                <button onClick={(e) => { e.stopPropagation(); borrarDelCatalogo(item.id, item.nombre); }} className="absolute top-2 right-2 text-red-300 hover:text-red-500 text-xs w-6 h-6 flex items-center justify-center rounded-full hover:bg-red-50">✕</button>
-                              )}
-                            </div>
-                          )
-                        })}
-                      </div>
-                    )}
-
-                    {/* FORMULARIO PARA AÑADIR SERVICIOS AL CATÁLOGO GENERAL (Solo Jefe) */}
-                    {esJefe && (
-                      <div className="mt-10 pt-8 border-t border-gray-100">
-                        <h3 className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-4">➕ Añadir Servicio al Catálogo (Global)</h3>
-                        <div className="flex flex-col md:flex-row gap-3">
-                          <input type="text" placeholder="Ej: Custodia Anual o Limpieza" value={nuevoNombreServicio} onChange={e => setNuevoNombreServicio(e.target.value)} className="flex-1 p-3 border-2 border-gray-100 rounded-xl font-bold text-sm outline-none focus:border-blue-400" />
-                          <input type="number" placeholder="Precio (€)" value={nuevoPrecioServicio} onChange={e => setNuevoPrecioServicio(e.target.value)} className="w-full md:w-32 p-3 border-2 border-gray-100 rounded-xl font-bold text-sm outline-none focus:border-blue-400" />
-                          <button onClick={agregarAlCatalogo} className="bg-black text-white px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-gray-800 transition-all">Añadir</button>
+                      vehiculos.map(v => (
+                        <div key={v.id} className="p-6 bg-gray-900 text-white rounded-3xl flex justify-between items-center shadow-lg">
+                          <div>
+                            <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">Vehículo</p>
+                            <p className="font-black text-lg uppercase leading-tight">{v.marca_modelo}</p>
+                            <p className="text-blue-300 font-black text-xs mt-2 bg-blue-900/50 inline-block px-3 py-1 rounded-lg">{v.matricula}</p>
+                          </div>
+                          <div className="opacity-20 text-4xl">🚗</div>
                         </div>
-                      </div>
+                      ))
+                    )}
+                    {esJefe && (
+                        <Link href={`/nuevo?cliente=${cliente.nombre}`} className="border-2 border-dashed border-gray-200 rounded-3xl flex items-center justify-center p-6 text-gray-400 font-black text-[10px] uppercase hover:bg-gray-50 transition-all">
+                          + Añadir Vehículo
+                        </Link>
                     )}
                   </div>
                 )}
 
-                {/* 3. COMPARTIMENTO FACTURAS */}
                 {pestanaActiva === 'facturas' && esJefe && (
                   <div className="space-y-4">
                     {facturas.length === 0 ? (
@@ -351,7 +206,6 @@ export default function FichaCliente({ params }) {
                   </div>
                 )}
 
-                {/* 4. COMPARTIMENTO FOTOS */}
                 {pestanaActiva === 'fotos' && (
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     {fotos.length === 0 ? (

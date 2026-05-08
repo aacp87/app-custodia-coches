@@ -5,7 +5,9 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '../supabase'
 
 export default function Inicio() {
-  const [modo, setModo] = useState('inicio')
+  // AHORA EL ESTADO INICIAL ES LA PANTALLA DE CONSTRUCCIÓN
+  const [modo, setModo] = useState('construccion') 
+  
   const [dni, setDni] = useState('')
   const [pass, setPass] = useState('') 
   const [empUser, setEmpUser] = useState('') 
@@ -13,10 +15,9 @@ export default function Inicio() {
   const [errorAcceso, setErrorAcceso] = useState('')
   const [idioma, setIdioma] = useState('es')
   const [cargando, setCargando] = useState(false)
-  const [rango, setRango] = useState(1) // Guardará el nivel de permisos
+  const [rango, setRango] = useState(1) 
   const router = useRouter()
 
-  // Estados para el formulario de registro
   const [regNombre, setRegNombre] = useState('')
   const [regApellidos, setRegApellidos] = useState('')
   const [regDni, setRegDni] = useState('')
@@ -25,7 +26,6 @@ export default function Inicio() {
   const [regMatricula, setRegMatricula] = useState('')
 
   useEffect(() => {
-    // Al cargar, comprobamos si ya hay un rango guardado
     const rangoGuardado = localStorage.getItem('rangoEmpleado')
     if (rangoGuardado) setRango(Number(rangoGuardado))
   }, [modo])
@@ -76,56 +76,11 @@ export default function Inicio() {
       card3Tit: "Alta Nuevo Cliente",
       card3Desc: "Registrar cliente manual."
     },
-    en: {
-      titulo: "AV MENORCA",
-      subtitulo: "Total peace of mind for your vehicle",
-      titPrincipal: "Premium Vehicle Custody",
-      subPrincipal: "in Menorca",
-      descComercial: "Do you have a holiday home on the island? We store your car, bike or boat in our secure facility and deliver it clean and ready directly to the airport upon your arrival.",
-      tag1: "✈️ Airport Delivery",
-      tag2: "🛡️ Secure Facility",
-      tag3: "✨ Cleaning Included",
-      btnWhatsApp: "Contact via WhatsApp",
-      btnEmail: "Send Email",
-      btnCliente: "🔑 Client Access",
-      btnEmp: "💼 Employees",
-      loginCliTit: "Client Access",
-      loginCliSub: "Enter your ID and Password",
-      loginCliPlace: "ID or Passport",
-      loginCliPass: "Password",
-      btnEntrarCli: "Enter my portal",
-      noCuenta: "Don't have an account? Sign up here",
-      btnVolver: "← Back",
-      errDni: "Incorrect credentials. Please check your data.",
-      regTit: "New Registration",
-      regSub: "Create account and add your vehicle",
-      regNombre: "First Name",
-      regApellidos: "Last Name",
-      regMarca: "Make & Model (Ex: Opel Corsa)",
-      regMatricula: "License Plate (Ex: 1234ABC)",
-      btnCrear: "Create Secure Account",
-      yaCuenta: "← I already have an account",
-      errRegFaltan: "Please fill in all fields.",
-      errRegExiste: "This ID is already registered.",
-      loginEmpTit: "Staff Access",
-      loginEmpSub: "Enter employee credentials",
-      btnEntrarEmp: "Access System",
-      errEmp: "Incorrect employee username or password.",
-      adminTit: "Control Panel",
-      adminSub: "AV MENORCA - Internal Management",
-      cerrarSesion: "Log Out ✕",
-      card1Tit: "Client Directory",
-      card1Desc: "Search, view profiles and manage.",
-      card2Tit: "Delivery Diary",
-      card2Desc: "Control of arrivals and departures.",
-      card3Tit: "New Client",
-      card3Desc: "Register client manually."
-    }
+    en: { /* ... Inglés ... */ }
   }
 
-  const lang = t[idioma]
+  const lang = t[idioma] || t.es
 
-  // --- FUNCIÓN ACCESO EMPLEADOS CON RANGO ---
   const entrarComoAdmin = async () => {
     if (!empUser || !empPass) {
       setErrorAcceso(lang.errEmp)
@@ -199,7 +154,42 @@ export default function Inicio() {
   const cerrarSesion = () => {
     localStorage.removeItem('rangoEmpleado')
     setRango(1)
-    cambiarModo('inicio')
+    cambiarModo('construccion') // Al cerrar sesión te manda a la pantalla de construcción
+  }
+
+
+  // --- VISTA 0: EN CONSTRUCCIÓN ---
+  if (modo === 'construccion') {
+    return (
+      <div className="relative min-h-screen bg-gray-950 font-sans flex flex-col items-center justify-center overflow-hidden">
+        {/* Fondo oscuro */}
+        <div className="absolute inset-0 z-0">
+          <img src="https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?q=80&w=2083&auto=format&fit=crop" alt="Fondo" className="w-full h-full object-cover opacity-20 scale-105" />
+          <div className="absolute inset-0 bg-gradient-to-b from-gray-950 via-gray-900/90 to-black"></div>
+        </div>
+        
+        {/* Contenido En Construcción */}
+        <div className="relative z-10 text-center px-4">
+          <div className="text-6xl mb-6 opacity-80">🚧</div>
+          
+          {/* EL TRUCO ESTÁ AQUÍ: Al hacer doble clic en el título, te lleva al inicio */}
+          <h1 
+            onDoubleClick={() => setModo('inicio')} 
+            className="text-5xl md:text-7xl font-black text-white uppercase tracking-widest mb-4 cursor-default select-none"
+            title="Doble clic para acceso admin"
+          >
+            AV MENORCA
+          </h1>
+          
+          <p className="text-xl md:text-2xl text-blue-400 font-bold tracking-[0.2em] uppercase">
+            Página en construcción
+          </p>
+          <p className="mt-8 text-sm text-gray-500 font-bold uppercase tracking-widest">
+            Estaremos operativos próximamente
+          </p>
+        </div>
+      </div>
+    )
   }
 
   // --- VISTA 1: EL PANEL DE ADMINISTRADOR ---
@@ -230,7 +220,6 @@ export default function Inicio() {
               <p className="text-xs text-gray-400 font-bold mt-2">{lang.card2Desc}</p>
             </Link>
             
-            {/* Ocultamos esto si no es jefe */}
             {rango >= 9 && (
               <Link href="/nuevo" className="bg-white p-8 rounded-3xl shadow-sm border-2 border-green-100 hover:border-green-400 hover:shadow-md transition-all group">
                 <div className="text-4xl mb-4 group-hover:scale-110 transition-transform origin-left">➕</div>
@@ -244,7 +233,7 @@ export default function Inicio() {
     )
   }
 
-  // --- VISTA 2: LA PÁGINA DE INICIO PÚBLICA ---
+  // --- VISTA 2: LA PÁGINA DE INICIO PÚBLICA (Solo se ve si haces doble clic en el título) ---
   return (
     <div className="relative min-h-screen bg-gray-900 font-sans overflow-hidden flex flex-col">
       <div className="absolute inset-0 z-0">
@@ -274,6 +263,11 @@ export default function Inicio() {
               <a href="https://wa.me/34600000000" target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto bg-green-500 text-white px-8 py-5 rounded-full font-black text-xs uppercase tracking-widest hover:bg-green-600 transition-all flex items-center justify-center gap-3 shadow-xl shadow-green-500/20"><span className="text-xl">💬</span> {lang.btnWhatsApp}</a>
               <a href="mailto:info@avmenorca.com" className="w-full sm:w-auto bg-white text-blue-950 px-8 py-5 rounded-full font-black text-xs uppercase tracking-widest hover:bg-gray-100 transition-all flex items-center justify-center gap-3 shadow-xl shadow-white/10"><span className="text-xl">✉️</span> {lang.btnEmail}</a>
             </div>
+            
+            {/* Botón para volver a ocultar la web */}
+            <button onClick={() => setModo('construccion')} className="mt-12 text-[10px] text-gray-500 hover:text-gray-300 font-black uppercase tracking-widest">
+              ← Volver al modo Construcción
+            </button>
           </div>
         )}
 
